@@ -29,7 +29,6 @@ async function main() {
     { name: "Henrique", email: "henriquets.2628@gmail.com", color: "#7c3aed" },
     { name: "Caio", email: "caio@tbaviation.com.br", color: "#be185d" },
     { name: "Gabi", email: "gabi@tbaviation.com.br", color: "#0891b2" },
-    { name: "Luis Henrique", email: "luishenrique@tbaviation.com.br", color: "#4d7c0f" },
   ];
 
   const users: Record<string, Awaited<ReturnType<typeof prisma.user.upsert>>> = {};
@@ -41,16 +40,16 @@ async function main() {
     });
   }
 
-  // ---- Usuário admin para testes rápidos ----
+  // ---- Admin: login rápido pelo primeiro nome do e-mail (ex: "ltavares") ----
   await prisma.user.upsert({
-    where: { email: "admin@tbaviation.com.br" },
+    where: { email: "ltavares@tbaviation.com.br" },
     update: {},
     create: {
-      name: "Admin",
-      email: "admin@tbaviation.com.br",
+      name: "Luis Henrique",
+      email: "ltavares@tbaviation.com.br",
       passwordHash: await bcrypt.hash(ADMIN_PASSWORD, 10),
       role: "INTERNAL",
-      color: "#101828",
+      color: "#4d7c0f",
     },
   });
 
@@ -301,7 +300,7 @@ async function main() {
   console.log("Seed concluído.");
   console.log(`Equipe interna: senha "${TEAM_PASSWORD}" para todos os e-mails @tbaviation.com.br e para ${team.find((t) => t.name === "Henrique")?.email}`);
   console.log(`Cliente de exemplo: cliente@exemplo.com / senha "${CLIENT_PASSWORD}"`);
-  console.log(`Admin de testes: admin@tbaviation.com.br / senha "${ADMIN_PASSWORD}"`);
+  console.log(`Admin: usuário "ltavares" (ou ltavares@tbaviation.com.br) / senha "${ADMIN_PASSWORD}"`);
 }
 
 main()

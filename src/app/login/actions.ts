@@ -6,13 +6,21 @@ import { prisma } from "@/lib/prisma";
 import { verifyPassword } from "@/lib/password";
 import { setSessionCookie } from "@/lib/auth";
 
+const DEFAULT_EMAIL_DOMAIN = "tbaviation.com.br";
+
 const schema = z.object({
-  email: z.string().email("Informe um e-mail válido"),
+  email: z.string().trim().min(1, "Informe seu usuário ou e-mail"),
   password: z.string().min(1, "Informe a senha"),
   next: z.string().optional(),
 });
 
 export type LoginState = { error?: string };
+
+/** Aceita tanto o e-mail completo quanto apenas a parte antes do "@" (ex: "ltavares"). */
+function resolveLoginEmail(identifier: string) {
+  const trimmed = identifier.toLowerCase().trim();
+  return trimmed.includes("@") ? trimmed : `${trimmed}@${DEFAULT_EMAIL_DOMAIN}`;
+}
 
 export async function loginAction(_prev: LoginState, formData: FormData): Promise<LoginState> {
   const parsed = schema.safeParse({
@@ -27,7 +35,7 @@ export async function loginAction(_prev: LoginState, formData: FormData): Promis
 
   const { email, password, next } = parsed.data;
 
-  const user = await prisma.user.findUnique({ where: { email: email.toLowerCase().trim() } });
+  const user = await prisma.user.findUnique({ where: { email: resolveLoginEmail(email) } });
   if (!user || !user.active) {
     return { error: "E-mail ou senha inválidos" };
   }
