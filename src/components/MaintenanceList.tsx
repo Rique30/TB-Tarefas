@@ -14,7 +14,7 @@ import {
   uploadMaintenanceAttachment,
   deleteMaintenanceAttachment,
 } from "@/app/actions/maintenance";
-import { MAINTENANCE_STATUS_LABEL, MAINTENANCE_TYPE_LABEL, formatDate } from "@/lib/status";
+import { MAINTENANCE_STATUS_LABEL, MAINTENANCE_TYPE_LABEL, formatDate, isMaintenanceOverdue } from "@/lib/status";
 
 export type MaintenanceRow = {
   id: string;
@@ -70,6 +70,7 @@ export function MaintenanceList({ events, canEdit }: { events: MaintenanceRow[];
                   <th className="px-4 py-2.5 font-medium">Tipo</th>
                   <th className="px-4 py-2.5 font-medium">Período</th>
                   <th className="px-4 py-2.5 font-medium">Concluída em</th>
+                  {canEdit && <th className="px-4 py-2.5 font-medium text-right">Ações</th>}
                 </tr>
               </thead>
               <tbody>
@@ -81,6 +82,22 @@ export function MaintenanceList({ events, canEdit }: { events: MaintenanceRow[];
                       {e.periodStart ? `${formatDate(e.periodStart)} — ${formatDate(e.periodEnd)}` : "-"}
                     </td>
                     <td className="px-4 py-2.5 text-muted">{formatDate(e.completedAt)}</td>
+                    {canEdit && (
+                      <td className="px-4 py-2.5">
+                        <div className="flex items-center justify-end gap-3">
+                          <EditMaintenanceButton event={e} />
+                          <button
+                            onClick={() => {
+                              if (confirm(`Excluir "${e.title}"?`)) deleteMaintenanceEvent(e.id);
+                            }}
+                            className="text-muted hover:text-danger transition-colors"
+                            aria-label="Excluir"
+                          >
+                            <Trash2 className="size-3.5" />
+                          </button>
+                        </div>
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>
@@ -96,6 +113,7 @@ function MaintenanceCard({ event, canEdit }: { event: MaintenanceRow; canEdit: b
   const [items, setItems] = useSyncedState(event.checklistItems);
   const inputRef = useRef<HTMLInputElement>(null);
   const done = items.filter((i) => i.done).length;
+  const overdue = isMaintenanceOverdue(event.periodEnd ? new Date(event.periodEnd) : null, event.status);
 
   return (
     <div className="bg-surface border border-border rounded-xl p-4">
@@ -110,7 +128,11 @@ function MaintenanceCard({ event, canEdit }: { event: MaintenanceRow; canEdit: b
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <Badge tone={maintenanceStatusTone(event.status)}>{MAINTENANCE_STATUS_LABEL[event.status]}</Badge>
+          {overdue ? (
+            <Badge tone="danger">Atrasada</Badge>
+          ) : (
+            <Badge tone={maintenanceStatusTone(event.status)}>{MAINTENANCE_STATUS_LABEL[event.status]}</Badge>
+          )}
           {canEdit && (
             <>
               <EditMaintenanceButton
