@@ -1,12 +1,13 @@
 import Link from "next/link";
 import { requireInternal } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { NewUserButton } from "@/components/UserFormModal";
+import { NewUserButton, EditUserNameButton } from "@/components/UserFormModal";
 import { UserActiveToggle } from "@/components/UserActiveToggle";
+import { DeleteUserButton } from "@/components/DeleteUserButton";
 import { AccessGrants } from "@/components/AccessGrants";
 
 export default async function UsersPage() {
-  await requireInternal();
+  const session = await requireInternal();
 
   const [users, aircraftList] = await Promise.all([
     prisma.user.findMany({
@@ -42,6 +43,7 @@ export default async function UsersPage() {
                 <th className="px-4 py-2.5 font-medium">E-mail</th>
                 <th className="px-4 py-2.5 font-medium">Cuida de</th>
                 <th className="px-4 py-2.5 font-medium">Status</th>
+                <th className="px-4 py-2.5 font-medium text-right">Ações</th>
               </tr>
             </thead>
             <tbody>
@@ -78,6 +80,12 @@ export default async function UsersPage() {
                   </td>
                   <td className="px-4 py-2.5">
                     <UserActiveToggle userId={u.id} active={u.active} />
+                  </td>
+                  <td className="px-4 py-2.5">
+                    <div className="flex items-center justify-end gap-2.5">
+                      <EditUserNameButton userId={u.id} name={u.name} />
+                      {u.id !== session.id && <DeleteUserButton userId={u.id} name={u.name} />}
+                    </div>
                   </td>
                 </tr>
               ))}

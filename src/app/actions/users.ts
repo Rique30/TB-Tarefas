@@ -52,6 +52,31 @@ export async function createUser(_prev: ActionState, formData: FormData): Promis
   return { success: true };
 }
 
+const renameSchema = z.object({
+  name: z.string().trim().min(1, "Informe o nome"),
+});
+
+export async function updateUserName(userId: string, _prev: ActionState, formData: FormData): Promise<ActionState> {
+  const session = await requireInternal();
+
+  const parsed = renameSchema.safeParse({ name: formData.get("name") });
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Dados inválidos" };
+
+  const user = await prisma.user.update({ where: { id: userId }, data: { name: parsed.data.name } });
+  await logAudit({ entityType: "Aircraft", entityId: user.id, action: "USER_RENAMED", newValue: user.name, user: session });
+  revalidatePath("/users");
+  return { success: true };
+}
+
+export async function deleteUser(userId: string) {
+  const session = await requireInternal();
+  if (userId === session.id) throw new Error("Você não pode excluir sua própria conta");
+
+  const user = await prisma.user.delete({ where: { id: userId } });
+  await logAudit({ entityType: "Aircraft", entityId: userId, action: "USER_DELETED", newValue: user.email, user: session });
+  revalidatePath("/users");
+}
+
 export async function setUserActive(userId: string, active: boolean) {
   const session = await requireInternal();
   await prisma.user.update({ where: { id: userId }, data: { active } });
