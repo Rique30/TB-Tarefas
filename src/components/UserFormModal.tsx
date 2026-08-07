@@ -2,9 +2,9 @@
 
 import { useActionState, useState } from "react";
 import { useCloseOnActionSuccess } from "@/lib/useCloseOnSuccess";
-import { UserPlus } from "lucide-react";
+import { UserPlus, Pencil } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
-import { createUser } from "@/app/actions/users";
+import { createUser, updateUserName } from "@/app/actions/users";
 import type { ActionState } from "@/app/actions/aircraft";
 
 const initialState: ActionState = {};
@@ -52,6 +52,38 @@ export function NewUserButton() {
             className="mt-1 rounded-lg bg-brand-blue text-white font-medium py-2 text-sm hover:bg-brand-navy transition-colors disabled:opacity-60"
           >
             {pending ? "Salvando..." : "Cadastrar usuário"}
+          </button>
+        </form>
+      </Modal>
+    </>
+  );
+}
+
+export function EditUserNameButton({ userId, name }: { userId: string; name: string }) {
+  const [open, setOpen] = useState(false);
+  const boundAction = updateUserName.bind(null, userId);
+  const [state, formAction, pending] = useActionState(boundAction, initialState);
+
+  useCloseOnActionSuccess(state, setOpen);
+
+  return (
+    <>
+      <button onClick={() => setOpen(true)} className="text-muted hover:text-brand-blue transition-colors" aria-label="Editar nome">
+        <Pencil className="size-3.5" />
+      </button>
+      <Modal open={open} onClose={() => setOpen(false)} title="Editar nome">
+        <form action={formAction} className="flex flex-col gap-3">
+          <label className="flex flex-col gap-1 text-sm">
+            <span className="font-medium text-foreground">Nome</span>
+            <input name="name" defaultValue={name} required className="rounded-lg border border-border px-3 py-2 text-sm" />
+          </label>
+          {state.error && <p className="text-sm text-danger bg-danger-bg rounded-lg px-3 py-2">{state.error}</p>}
+          <button
+            type="submit"
+            disabled={pending}
+            className="mt-1 rounded-lg bg-brand-blue text-white font-medium py-2 text-sm hover:bg-brand-navy transition-colors disabled:opacity-60"
+          >
+            {pending ? "Salvando..." : "Salvar"}
           </button>
         </form>
       </Modal>
