@@ -1,12 +1,13 @@
 import { PrismaClient } from "../src/generated/prisma/client";
-import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
+import { PrismaPg } from "@prisma/adapter-pg";
 import bcrypt from "bcryptjs";
 
-const adapter = new PrismaBetterSqlite3({ url: process.env.DATABASE_URL || "file:./dev.db" });
+const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
 const prisma = new PrismaClient({ adapter });
 
 const TEAM_PASSWORD = "tbaviation123";
 const CLIENT_PASSWORD = "cliente123";
+const ADMIN_PASSWORD = "1234";
 
 function daysFromNow(days: number) {
   const d = new Date();
@@ -39,6 +40,19 @@ async function main() {
       create: { name: member.name, email: member.email, passwordHash, role: "INTERNAL", color: member.color },
     });
   }
+
+  // ---- Usuário admin para testes rápidos ----
+  await prisma.user.upsert({
+    where: { email: "admin@tbaviation.com.br" },
+    update: {},
+    create: {
+      name: "Admin",
+      email: "admin@tbaviation.com.br",
+      passwordHash: await bcrypt.hash(ADMIN_PASSWORD, 10),
+      role: "INTERNAL",
+      color: "#101828",
+    },
+  });
 
   const aircraftData = [
     { registration: "PS-WRA", model: "Falcon 900EX", nickname: "Falcon 1" },
@@ -287,6 +301,7 @@ async function main() {
   console.log("Seed concluído.");
   console.log(`Equipe interna: senha "${TEAM_PASSWORD}" para todos os e-mails @tbaviation.com.br e para ${team.find((t) => t.name === "Henrique")?.email}`);
   console.log(`Cliente de exemplo: cliente@exemplo.com / senha "${CLIENT_PASSWORD}"`);
+  console.log(`Admin de testes: admin@tbaviation.com.br / senha "${ADMIN_PASSWORD}"`);
 }
 
 main()

@@ -8,19 +8,19 @@ separados: **tarefas**, **controle de vencimentos** e **controle de manutenção
 
 - **Next.js 16** (App Router, Server Actions, Turbopack) + **TypeScript**
 - **Tailwind CSS v4**
-- **Prisma 7** + **SQLite** (via driver adapter `@prisma/adapter-better-sqlite3`) — banco em arquivo, sem dependências externas
+- **Prisma 7** + **PostgreSQL** (via driver adapter `@prisma/adapter-pg`)
 - Autenticação própria com **JWT em cookie httpOnly** (`jose`) + senhas com `bcryptjs`
 - **dnd-kit** para o quadro Kanban de tarefas
 - `lucide-react` para ícones
 
-Não há serviços externos obrigatórios: o projeto roda localmente com `npm install && npm run dev`.
-
 ## Como rodar localmente
 
+Requer um Postgres acessível (local, Docker, ou um banco na nuvem — veja a seção de deploy abaixo).
+
 ```bash
-npm install
-cp .env.example .env        # ajuste SESSION_SECRET em produção
-npx prisma migrate dev      # cria o banco SQLite e as tabelas
+npm install                 # gera o Prisma Client via postinstall
+cp .env.example .env        # defina DATABASE_URL e um SESSION_SECRET
+npx prisma migrate dev      # cria as tabelas no Postgres configurado
 npx prisma db seed          # popula com equipe, aeronaves e dados de exemplo
 npm run dev
 ```
@@ -31,10 +31,11 @@ Acesse `http://localhost:3000`.
 
 | Perfil | E-mail | Senha |
 |---|---|---|
+| Admin de testes | `admin@tbaviation.com.br` | `1234` |
 | Equipe interna (acesso completo) | `rafa@tbaviation.com.br`, `thomas@tbaviation.com.br`, `rafael@tbaviation.com.br`, `matheus@tbaviation.com.br`, `henriquets.2628@gmail.com`, `caio@tbaviation.com.br`, `gabi@tbaviation.com.br`, `luishenrique@tbaviation.com.br` | `tbaviation123` |
 | Cliente / proprietário (leitura, restrito a uma aeronave) | `cliente@exemplo.com` | `cliente123` |
 
-Troque essas senhas (ou desative os usuários de exemplo) antes de usar em produção.
+Troque essas senhas (ou desative os usuários de exemplo, especialmente o admin com senha `1234`) antes de usar em produção.
 
 ## Modelo de dados
 
@@ -73,13 +74,25 @@ src/components/               componentes de UI (quadro Kanban, modais, tabelas,
 public/logo-horizontal.png, logo-stacked.png, tb-icon.png   logo oficial da TB Aviation usada na interface
 ```
 
+## Deploy (Vercel)
+
+1. Provisione um Postgres — pela aba **Storage** do projeto na Vercel (integração Neon/Postgres) ou qualquer outro
+   provedor (Neon, Supabase, RDS etc.).
+2. Configure a variável de ambiente `DATABASE_URL` no projeto Vercel com a connection string desse banco, e
+   `SESSION_SECRET` com uma string aleatória longa.
+3. Rode as migrações contra esse banco antes (ou durante) o primeiro deploy:
+   ```bash
+   DATABASE_URL="<connection string>" npx prisma migrate deploy
+   DATABASE_URL="<connection string>" npx prisma db seed   # opcional, popula dados de exemplo
+   ```
+   O `postinstall` (`prisma generate`) já roda automaticamente no build da Vercel.
+
 ## Notas para produção
 
-- **Banco de dados**: o projeto usa SQLite em arquivo por simplicidade. Para hospedagem serverless (ex.: Vercel),
-  troque para Postgres (ver `.agents/skills/prisma-upgrade-v7` no repo para o guia de driver adapters do Prisma 7) —
-  disco local não é persistente nesses ambientes.
 - **Anexos**: arquivos enviados em tarefas são salvos em `public/uploads`. Em hospedagem serverless isso não
   persiste entre deploys/instâncias; para produção, troque por um serviço de armazenamento de objetos (S3, Vercel
   Blob etc.).
 - **`SESSION_SECRET`**: gere uma string aleatória longa e mantenha em segredo — é usada para assinar os cookies de
   sessão (JWT).
+- Troque ou desative os usuários de exemplo (principalmente o admin com senha `1234`) antes de expor a aplicação
+  publicamente.

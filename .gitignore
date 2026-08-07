@@ -43,10 +43,6 @@ next-env.d.ts
 
 /src/generated/prisma
 
-# database
-/dev.db
-/dev.db-journal
-
 # uploads (local attachment storage)
 /public/uploads/*
 !/public/uploads/.gitkeep
