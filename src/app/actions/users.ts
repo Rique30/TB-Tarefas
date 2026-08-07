@@ -88,21 +88,3 @@ export async function setUserActive(userId: string, active: boolean) {
   });
   revalidatePath("/users");
 }
-
-export async function grantAircraftAccess(userId: string, aircraftId: string, canEdit: boolean) {
-  const session = await requireInternal();
-  await prisma.aircraftAccess.upsert({
-    where: { userId_aircraftId: { userId, aircraftId } },
-    update: { canEdit },
-    create: { userId, aircraftId, canEdit },
-  });
-  await logAudit({ entityType: "Aircraft", entityId: aircraftId, action: "ACCESS_GRANTED", newValue: userId, user: session });
-  revalidatePath("/users");
-}
-
-export async function revokeAircraftAccess(accessId: string) {
-  const session = await requireInternal();
-  const grant = await prisma.aircraftAccess.delete({ where: { id: accessId } });
-  await logAudit({ entityType: "Aircraft", entityId: grant.aircraftId, action: "ACCESS_REVOKED", newValue: grant.userId, user: session });
-  revalidatePath("/users");
-}

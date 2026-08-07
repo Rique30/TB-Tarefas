@@ -67,6 +67,13 @@ export async function createTask(aircraftId: string, _prev: ActionState, formDat
   return { success: true };
 }
 
+/** Same as createTask, but reads the aircraft from the form itself for use on the global /tasks page. */
+export async function createGlobalTask(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const aircraftId = formData.get("aircraftId");
+  if (typeof aircraftId !== "string" || !aircraftId) return { error: "Selecione uma aeronave" };
+  return createTask(aircraftId, _prev, formData);
+}
+
 export async function updateTask(taskId: string, _prev: ActionState, formData: FormData): Promise<ActionState> {
   const session = await requireSession();
   const existing = await prisma.task.findUniqueOrThrow({ where: { id: taskId } });

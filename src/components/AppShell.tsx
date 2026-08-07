@@ -28,7 +28,7 @@ export function AppShell({
     { href: "/", label: "Painel", icon: LayoutDashboard },
     { href: "/aircraft", label: "Aeronaves", icon: Plane },
     { href: "/tasks", label: "Tarefas", icon: ListChecks },
-    ...(session.role === "INTERNAL" ? [{ href: "/users", label: "Equipe & Acessos", icon: Users }] : []),
+    ...(session.role === "INTERNAL" ? [{ href: "/users", label: "Equipe", icon: Users }] : []),
   ];
 
   const sidebarContent = (

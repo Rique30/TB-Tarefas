@@ -38,13 +38,7 @@ export function NewUserButton() {
             <span className="font-medium text-foreground">Senha provisória</span>
             <input name="password" type="text" required minLength={6} className="rounded-lg border border-border px-3 py-2 text-sm" />
           </label>
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="font-medium text-foreground">Perfil</span>
-            <select name="role" className="rounded-lg border border-border px-3 py-2 text-sm bg-surface">
-              <option value="INTERNAL">Equipe interna (acesso completo)</option>
-              <option value="CLIENT">Cliente / proprietário (acesso restrito)</option>
-            </select>
-          </label>
+          <input type="hidden" name="role" value="INTERNAL" />
           {state.error && <p className="text-sm text-danger bg-danger-bg rounded-lg px-3 py-2">{state.error}</p>}
           <button
             type="submit"
