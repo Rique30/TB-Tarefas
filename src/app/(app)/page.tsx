@@ -6,7 +6,15 @@ import { prisma } from "@/lib/prisma";
 import { DashboardFilters } from "@/components/DashboardFilters";
 import { StatCard, SectionCard } from "@/components/StatCard";
 import { Badge, expiryStatusTone } from "@/components/Badge";
-import { EXPIRY_CATEGORY_LABEL, EXPIRY_STATUS_LABEL, MAINTENANCE_STATUS_LABEL, daysUntil, expiryStatus, formatDate } from "@/lib/status";
+import {
+  EXPIRY_CATEGORY_LABEL,
+  EXPIRY_STATUS_LABEL,
+  MAINTENANCE_STATUS_LABEL,
+  daysUntil,
+  expiryStatus,
+  formatDate,
+  isMaintenanceOverdue,
+} from "@/lib/status";
 
 export default async function DashboardPage({
   searchParams,
@@ -17,18 +25,34 @@ export default async function DashboardPage({
   const params = await searchParams;
   const accessible = await getAccessibleAircraftIds(session);
 
-  const aircraftScope = accessible ? { in: accessible } : undefined;
-  const selectedAircraft = params.aircraft;
+  const myAircraft =
+    session.role === "INTERNAL"
+      ? await prisma.aircraft.findMany({
+          where: { responsibles: { some: { id: session.id } }, active: true },
+          select: { id: true },
+        })
+      : [];
+  const myAircraftIds = myAircraft.map((a) => a.id);
+  const hasOwnAircraft = myAircraftIds.length > 0;
+
   const selectedResponsible = params.responsible;
   const selectedType = params.type;
+  const selectedAircraft = params.aircraft ?? (hasOwnAircraft ? "mine" : "all");
 
-  const aircraftWhere = {
-    ...(aircraftScope ? { id: aircraftScope } : {}),
-    ...(selectedAircraft ? { id: selectedAircraft } : {}),
-  };
+  let filterAircraftIds: string[] | null = null;
+  if (selectedAircraft === "mine") filterAircraftIds = myAircraftIds;
+  else if (selectedAircraft !== "all") filterAircraftIds = [selectedAircraft];
 
-  const [allAircraft, responsibles] = await Promise.all([
+  if (accessible) {
+    filterAircraftIds = filterAircraftIds ? filterAircraftIds.filter((id) => accessible.includes(id)) : accessible;
+  }
+
+  const aircraftWhere = filterAircraftIds ? { id: { in: filterAircraftIds } } : {};
+  const accessibleWhere = accessible ? { id: { in: accessible } } : {};
+
+  const [allAircraft, accessibleAircraft, responsibles] = await Promise.all([
     prisma.aircraft.findMany({ where: aircraftWhere, orderBy: { registration: "asc" } }),
+    prisma.aircraft.findMany({ where: accessibleWhere, orderBy: { registration: "asc" } }),
     prisma.user.findMany({ where: { role: "INTERNAL", active: true }, orderBy: { name: "asc" } }),
   ]);
 
@@ -107,13 +131,18 @@ export default async function DashboardPage({
       <div>
         <h1 className="text-xl font-semibold text-foreground">Painel geral</h1>
         <p className="text-sm text-muted mt-0.5">
-          Olá, {session.name.split(" ")[0]} — visão consolidada da frota TB Aviation.
+          Olá, {session.name.split(" ")[0]} —{" "}
+          {selectedAircraft === "mine"
+            ? "mostrando as aeronaves que você cuida."
+            : "visão consolidada da frota TB Aviation."}
         </p>
       </div>
 
       <DashboardFilters
-        aircraftOptions={allAircraft.map((a) => ({ id: a.id, label: `${a.registration} · ${a.model}` }))}
+        aircraftOptions={accessibleAircraft.map((a) => ({ id: a.id, label: `${a.registration} · ${a.model}` }))}
         responsibleOptions={responsibles.map((r) => ({ id: r.id, label: r.name }))}
+        defaultAircraft={selectedAircraft}
+        showMineOption={hasOwnAircraft}
       />
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -206,7 +235,11 @@ export default async function DashboardPage({
                             {m.periodStart ? `${formatDate(m.periodStart)} — ${formatDate(m.periodEnd)}` : "sem período definido"}
                           </p>
                         </div>
-                        <Badge tone={m.status === "EM_ANDAMENTO" ? "brand" : "neutral"}>{MAINTENANCE_STATUS_LABEL[m.status]}</Badge>
+                        {isMaintenanceOverdue(m.periodEnd, m.status) ? (
+                          <Badge tone="danger">Atrasada</Badge>
+                        ) : (
+                          <Badge tone={m.status === "EM_ANDAMENTO" ? "brand" : "neutral"}>{MAINTENANCE_STATUS_LABEL[m.status]}</Badge>
+                        )}
                       </div>
                       {total > 0 && (
                         <div className="mt-1.5 flex items-center gap-2">

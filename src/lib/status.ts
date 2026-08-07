@@ -48,6 +48,11 @@ export function isTaskOverdue(dueDate: Date | null, status: string, from: Date =
   return daysUntil(dueDate, from) < 0;
 }
 
+export function isMaintenanceOverdue(periodEnd: Date | null, status: string, from: Date = new Date()): boolean {
+  if (!periodEnd || status === "CONCLUIDA") return false;
+  return daysUntil(periodEnd, from) < 0;
+}
+
 export function formatDate(date: Date | string | null | undefined): string {
   if (!date) return "-";
   const d = typeof date === "string" ? new Date(date) : date;

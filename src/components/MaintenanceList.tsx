@@ -14,7 +14,7 @@ import {
   uploadMaintenanceAttachment,
   deleteMaintenanceAttachment,
 } from "@/app/actions/maintenance";
-import { MAINTENANCE_STATUS_LABEL, MAINTENANCE_TYPE_LABEL, formatDate } from "@/lib/status";
+import { MAINTENANCE_STATUS_LABEL, MAINTENANCE_TYPE_LABEL, formatDate, isMaintenanceOverdue } from "@/lib/status";
 
 export type MaintenanceRow = {
   id: string;
@@ -96,6 +96,7 @@ function MaintenanceCard({ event, canEdit }: { event: MaintenanceRow; canEdit: b
   const [items, setItems] = useSyncedState(event.checklistItems);
   const inputRef = useRef<HTMLInputElement>(null);
   const done = items.filter((i) => i.done).length;
+  const overdue = isMaintenanceOverdue(event.periodEnd ? new Date(event.periodEnd) : null, event.status);
 
   return (
     <div className="bg-surface border border-border rounded-xl p-4">
@@ -110,7 +111,11 @@ function MaintenanceCard({ event, canEdit }: { event: MaintenanceRow; canEdit: b
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <Badge tone={maintenanceStatusTone(event.status)}>{MAINTENANCE_STATUS_LABEL[event.status]}</Badge>
+          {overdue ? (
+            <Badge tone="danger">Atrasada</Badge>
+          ) : (
+            <Badge tone={maintenanceStatusTone(event.status)}>{MAINTENANCE_STATUS_LABEL[event.status]}</Badge>
+          )}
           {canEdit && (
             <>
               <EditMaintenanceButton

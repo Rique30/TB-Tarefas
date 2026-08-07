@@ -7,9 +7,13 @@ type Option = { id: string; label: string };
 export function DashboardFilters({
   aircraftOptions,
   responsibleOptions,
+  defaultAircraft,
+  showMineOption,
 }: {
   aircraftOptions: Option[];
   responsibleOptions: Option[];
+  defaultAircraft: string;
+  showMineOption: boolean;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -27,11 +31,12 @@ export function DashboardFilters({
       <span className="text-xs font-semibold uppercase tracking-wide text-muted">Filtros</span>
 
       <select
-        defaultValue={searchParams.get("aircraft") ?? ""}
+        defaultValue={searchParams.get("aircraft") ?? defaultAircraft}
         onChange={(e) => update("aircraft", e.target.value)}
         className="rounded-lg border border-border px-2.5 py-1.5 text-sm bg-surface"
       >
-        <option value="">Todas as aeronaves</option>
+        {showMineOption && <option value="mine">Minhas aeronaves</option>}
+        <option value="all">Todas as aeronaves</option>
         {aircraftOptions.map((o) => (
           <option key={o.id} value={o.id}>
             {o.label}
