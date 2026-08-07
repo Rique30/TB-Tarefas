@@ -21,7 +21,6 @@ export async function seedDatabase(prisma: PrismaClient) {
     { name: "Thomas", email: "thomas@tbaviation.com.br", color: "#14285e" },
     { name: "Rafael", email: "rafael@tbaviation.com.br", color: "#0f766e" },
     { name: "Matheus", email: "matheus@tbaviation.com.br", color: "#b45309" },
-    { name: "Henrique", email: "henriquets.2628@gmail.com", color: "#7c3aed" },
     { name: "Caio", email: "caio@tbaviation.com.br", color: "#be185d" },
     { name: "Gabi", email: "gabi@tbaviation.com.br", color: "#0891b2" },
   ];
@@ -36,7 +35,7 @@ export async function seedDatabase(prisma: PrismaClient) {
   }
 
   // ---- Admin: login rápido pelo primeiro nome do e-mail (ex: "ltavares") ----
-  await prisma.user.upsert({
+  const ltavares = await prisma.user.upsert({
     where: { email: "ltavares@tbaviation.com.br" },
     update: {},
     create: {
@@ -47,6 +46,26 @@ export async function seedDatabase(prisma: PrismaClient) {
       color: "#4d7c0f",
     },
   });
+  users["Luis Henrique"] = ltavares;
+
+  // ---- Equipe adicional (acesso interno, senha simples "1234") ----
+  const shortPasswordHash = await bcrypt.hash(ADMIN_PASSWORD, 10);
+  const extraTeam = [
+    { name: "Gabriela Pereira", email: "gpereira@tbaviation.com.br", color: "#db2777" },
+    { name: "Caio Chiavelli", email: "cchiavelli@tbaviation.com.br", color: "#7c3aed" },
+    { name: "Thomas Antonelli", email: "tantonelli@tbaviation.com.br", color: "#0369a1" },
+    { name: "Henrique Cuin", email: "hcuin@tbaviation.com.br", color: "#ca8a04" },
+    { name: "Matheus Gonzalez", email: "mgonzalez@tbaviation.com.br", color: "#059669" },
+    { name: "Rafael Braz", email: "rbraz@tbaviation.com.br", color: "#9333ea" },
+    { name: "Rafael Henrique Leonardi", email: "rleonardi@tbaviation.com.br", color: "#dc2626" },
+  ];
+  for (const member of extraTeam) {
+    users[member.name] = await prisma.user.upsert({
+      where: { email: member.email },
+      update: {},
+      create: { name: member.name, email: member.email, passwordHash: shortPasswordHash, role: "INTERNAL", color: member.color },
+    });
+  }
 
   const aircraftData = [
     { registration: "PS-WRA", model: "Falcon 900EX", nickname: "Falcon 1", responsibles: ["Rafa", "Thomas"] },
@@ -119,7 +138,7 @@ export async function seedDatabase(prisma: PrismaClient) {
       aircraft: "PS-WRA",
       title: "Atualizar cadastro ANAC",
       description: "Conferir dados cadastrais após troca de tripulação.",
-      assignees: ["Henrique"],
+      assignees: ["Luis Henrique"],
       status: "DONE",
       dueInDays: -10,
       checklist: ["Conferir dados", "Protocolar atualização"],
@@ -172,7 +191,7 @@ export async function seedDatabase(prisma: PrismaClient) {
         status: t.status,
         startDate: daysFromNow(t.dueInDays - 7),
         dueDate: daysFromNow(t.dueInDays),
-        createdById: users["Henrique"].id,
+        createdById: ltavares.id,
       },
     });
     for (let i = 0; i < t.checklist.length; i++) {
@@ -298,7 +317,7 @@ export async function seedDatabase(prisma: PrismaClient) {
   });
 
   return {
-    users: team.length + 2, // + ltavares + cliente
+    users: team.length + extraTeam.length + 2, // + ltavares + cliente
     aircraft: aircraftData.length,
     tasks: taskSeed.length,
     expiryItems: expirySeed.length,

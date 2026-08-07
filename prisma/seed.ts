@@ -8,7 +8,8 @@ const prisma = new PrismaClient({ adapter });
 seedDatabase(prisma)
   .then((summary) => {
     console.log("Seed concluído:", summary);
-    console.log('Equipe interna: senha "tbaviation123" para todos os e-mails @tbaviation.com.br e henriquets.2628@gmail.com');
+    console.log('Equipe original: senha "tbaviation123" para os e-mails @tbaviation.com.br');
+    console.log('Equipe adicional: senha "1234" para gpereira, cchiavelli, tantonelli, hcuin, mgonzalez, rbraz e rleonardi @tbaviation.com.br');
     console.log('Cliente de exemplo: cliente@exemplo.com / senha "cliente123"');
     console.log('Admin: usuário "ltavares" (ou ltavares@tbaviation.com.br) / senha "1234"');
   })
