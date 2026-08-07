@@ -1,0 +1,241 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
+
+enum Role {
+  INTERNAL // Equipe TB Aviation: acesso completo
+  CLIENT // Cliente/proprietario: acesso restrito as proprias aeronaves
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  DONE
+}
+
+enum ExpiryCategory {
+  PORTE_OBRIGATORIO
+  EQUIPAMENTO
+}
+
+enum MaintenanceType {
+  PROGRAMADA
+  NAO_PROGRAMADA
+}
+
+enum MaintenanceStatus {
+  PLANEJADA
+  EM_ANDAMENTO
+  CONCLUIDA
+}
+
+// ---------------------------------------------------------------------------
+// Users & access
+// ---------------------------------------------------------------------------
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         Role     @default(INTERNAL)
+  color        String   @default("#2563eb")
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+
+  assignedTasks   Task[]           @relation("TaskAssignee")
+  createdTasks    Task[]           @relation("TaskCreatedBy")
+  comments        Comment[]
+  attachments     Attachment[]
+  aircraftAccess  AircraftAccess[]
+  auditLogs       AuditLog[]
+}
+
+// Grants a CLIENT user read (or read/write) access to a specific aircraft.
+model AircraftAccess {
+  id         String   @id @default(cuid())
+  userId     String
+  aircraftId String
+  canEdit    Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  aircraft Aircraft @relation(fields: [aircraftId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, aircraftId])
+}
+
+// ---------------------------------------------------------------------------
+// Aircraft - central entity
+// ---------------------------------------------------------------------------
+
+model Aircraft {
+  id           String   @id @default(cuid())
+  registration String   @unique // matricula, ex: PS-WRA
+  model        String // ex: Falcon 900EX, Phenom 300
+  nickname     String?
+  notes        String?
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  tasks             Task[]
+  expiryItems       ExpiryItem[]
+  maintenanceEvents MaintenanceEvent[]
+  accessGrants      AircraftAccess[]
+}
+
+// ---------------------------------------------------------------------------
+// Tarefas
+// ---------------------------------------------------------------------------
+
+model Task {
+  id          String     @id @default(cuid())
+  title       String
+  description String?
+  status      TaskStatus @default(TODO)
+  order       Int        @default(0)
+  startDate   DateTime?
+  dueDate     DateTime?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  aircraftId String
+  aircraft   Aircraft @relation(fields: [aircraftId], references: [id], onDelete: Cascade)
+
+  assigneeId String?
+  assignee   User?   @relation("TaskAssignee", fields: [assigneeId], references: [id])
+
+  createdById String?
+  createdBy   User?   @relation("TaskCreatedBy", fields: [createdById], references: [id])
+
+  checklistItems ChecklistItem[]
+  comments       Comment[]
+  attachments    Attachment[]
+}
+
+model ChecklistItem {
+  id     String  @id @default(cuid())
+  taskId String
+  title  String
+  done   Boolean @default(false)
+  order  Int     @default(0)
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  taskId    String
+  authorId  String?
+  body      String
+  createdAt DateTime @default(now())
+
+  task   Task  @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  author User? @relation(fields: [authorId], references: [id])
+}
+
+model Attachment {
+  id         String   @id @default(cuid())
+  taskId     String
+  filename   String
+  url        String
+  size       Int      @default(0)
+  uploadedBy String?
+  createdAt  DateTime @default(now())
+
+  task     Task  @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  uploader User? @relation(fields: [uploadedBy], references: [id])
+}
+
+// ---------------------------------------------------------------------------
+// Controle de Vencimentos
+// ---------------------------------------------------------------------------
+
+model ExpiryItem {
+  id               String         @id @default(cuid())
+  aircraftId       String
+  name             String // ex: CVA, Seguro RETA, Laudo PBN...
+  category         ExpiryCategory @default(EQUIPAMENTO)
+  dueDate          DateTime
+  notifyDaysBefore Int            @default(30) // suporte a notificacoes futuras por e-mail
+  notes            String?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  aircraft          Aircraft           @relation(fields: [aircraftId], references: [id], onDelete: Cascade)
+  notificationLogs  NotificationLog[]
+}
+
+// Registro de envios de notificacao (estrutura pronta para a fase futura de e-mail)
+model NotificationLog {
+  id           String   @id @default(cuid())
+  expiryItemId String
+  daysBefore   Int
+  sentAt       DateTime @default(now())
+  channel      String   @default("email")
+
+  expiryItem ExpiryItem @relation(fields: [expiryItemId], references: [id], onDelete: Cascade)
+}
+
+// ---------------------------------------------------------------------------
+// Controle de Manutencao
+// ---------------------------------------------------------------------------
+
+model MaintenanceEvent {
+  id               String            @id @default(cuid())
+  aircraftId       String
+  type             MaintenanceType   @default(PROGRAMADA)
+  title            String
+  scopeDescription String?
+  periodStart      DateTime?
+  periodEnd        DateTime?
+  status           MaintenanceStatus @default(PLANEJADA)
+  discrepancy      String? // relato de pane/discrepancia, usado em NAO_PROGRAMADA
+  completedAt      DateTime?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  aircraft       Aircraft                   @relation(fields: [aircraftId], references: [id], onDelete: Cascade)
+  checklistItems MaintenanceChecklistItem[]
+}
+
+model MaintenanceChecklistItem {
+  id                 String  @id @default(cuid())
+  maintenanceEventId String
+  title              String
+  done               Boolean @default(false)
+  order              Int     @default(0)
+
+  maintenanceEvent MaintenanceEvent @relation(fields: [maintenanceEventId], references: [id], onDelete: Cascade)
+}
+
+// ---------------------------------------------------------------------------
+// Auditoria basica
+// ---------------------------------------------------------------------------
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  entityType String // "Task" | "ExpiryItem" | "MaintenanceEvent" | "Aircraft"
+  entityId   String
+  action     String // "CREATED" | "UPDATED" | "DELETED" | "STATUS_CHANGED" | "COMMENTED" | ...
+  field      String?
+  oldValue   String?
+  newValue   String?
+  userId     String?
+  userName   String?
+  createdAt  DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id])
+
+  @@index([entityType, entityId])
+}
