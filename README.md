@@ -49,13 +49,13 @@ A **Aeronave** (matrícula + modelo) é a entidade central. Cada aeronave tem tr
   tarefa com vários responsáveis aparece na lista de cada um deles).
 - **Vencimentos** — itens com data de validade (CVA, seguros, laudos PBN/RVSM, INFOSAR/ELT, FISTEL, bote
   salva-vidas, kit de primeiros socorros, conjunto de sobrevivência etc.), categorizados como *porte obrigatório* ou
-  *equipamento*, com status calculado (em dia / vencendo em breve ≤30 dias / vencido) e documentos anexados (PDF/PNG,
+  *equipamento*, com status calculado (em dia / vencendo em breve ≤30 dias / vencido) e documentos anexados (PDF/PNG/JPEG,
   ex: apólice, certificado escaneado). Cada item já guarda `notifyDaysBefore` e existe uma tabela `NotificationLog` —
   a estrutura está pronta para o envio de e-mails de aviso automático numa fase futura, ainda não implementado.
 - **Manutenção** — eventos programados (com período) ou não programados (discrepâncias/panes), com escopo,
-  checklist de serviços com progresso, documentos anexados (PDF/PNG) e histórico de manutenções concluídas.
+  checklist de serviços com progresso, documentos anexados (PDF/PNG/JPEG) e histórico de manutenções concluídas.
 
-Além disso, cada aeronave tem uma seção de **documentos gerais da ficha** (PDF/PNG), independente de tarefa,
+Além disso, cada aeronave tem uma seção de **documentos gerais da ficha** (PDF/PNG/JPEG), independente de tarefa,
 vencimento ou manutenção específicos, visível em todas as abas.
 
 Todas as alterações relevantes (criação, mudança de status, comentários, anexos) geram um registro em `AuditLog`,
