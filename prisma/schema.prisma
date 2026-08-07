@@ -52,12 +52,15 @@ model User {
   active       Boolean  @default(true)
   createdAt    DateTime @default(now())
 
-  assignedTasks   Task[]           @relation("TaskAssignee")
-  createdTasks    Task[]           @relation("TaskCreatedBy")
-  comments        Comment[]
-  attachments     Attachment[]
-  aircraftAccess  AircraftAccess[]
-  auditLogs       AuditLog[]
+  assignedTasks             Task[]                 @relation("TaskAssignees")
+  createdTasks              Task[]                 @relation("TaskCreatedBy")
+  comments                  Comment[]
+  attachments               Attachment[]
+  expiryAttachments         ExpiryAttachment[]
+  maintenanceAttachments    MaintenanceAttachment[]
+  aircraftAttachments       AircraftAttachment[]
+  aircraftAccess            AircraftAccess[]
+  auditLogs                 AuditLog[]
 }
 
 // Grants a CLIENT user read (or read/write) access to a specific aircraft.
@@ -92,6 +95,7 @@ model Aircraft {
   expiryItems       ExpiryItem[]
   maintenanceEvents MaintenanceEvent[]
   accessGrants      AircraftAccess[]
+  attachments       AircraftAttachment[]
 }
 
 // ---------------------------------------------------------------------------
@@ -112,8 +116,7 @@ model Task {
   aircraftId String
   aircraft   Aircraft @relation(fields: [aircraftId], references: [id], onDelete: Cascade)
 
-  assigneeId String?
-  assignee   User?   @relation("TaskAssignee", fields: [assigneeId], references: [id])
+  assignees User[] @relation("TaskAssignees")
 
   createdById String?
   createdBy   User?   @relation("TaskCreatedBy", fields: [createdById], references: [id])
@@ -174,6 +177,21 @@ model ExpiryItem {
 
   aircraft          Aircraft           @relation(fields: [aircraftId], references: [id], onDelete: Cascade)
   notificationLogs  NotificationLog[]
+  attachments       ExpiryAttachment[]
+}
+
+// Documento anexado a um item de vencimento (ex: apolice, laudo, certificado escaneado)
+model ExpiryAttachment {
+  id           String   @id @default(cuid())
+  expiryItemId String
+  filename     String
+  url          String
+  size         Int      @default(0)
+  uploadedBy   String?
+  createdAt    DateTime @default(now())
+
+  expiryItem ExpiryItem @relation(fields: [expiryItemId], references: [id], onDelete: Cascade)
+  uploader   User?      @relation(fields: [uploadedBy], references: [id])
 }
 
 // Registro de envios de notificacao (estrutura pronta para a fase futura de e-mail)
@@ -207,6 +225,21 @@ model MaintenanceEvent {
 
   aircraft       Aircraft                   @relation(fields: [aircraftId], references: [id], onDelete: Cascade)
   checklistItems MaintenanceChecklistItem[]
+  attachments    MaintenanceAttachment[]
+}
+
+// Documento anexado a um evento de manutencao (ex: relatorio de servico, nota fiscal)
+model MaintenanceAttachment {
+  id                  String   @id @default(cuid())
+  maintenanceEventId  String
+  filename            String
+  url                 String
+  size                Int      @default(0)
+  uploadedBy          String?
+  createdAt           DateTime @default(now())
+
+  maintenanceEvent MaintenanceEvent @relation(fields: [maintenanceEventId], references: [id], onDelete: Cascade)
+  uploader         User?            @relation(fields: [uploadedBy], references: [id])
 }
 
 model MaintenanceChecklistItem {
@@ -217,6 +250,20 @@ model MaintenanceChecklistItem {
   order              Int     @default(0)
 
   maintenanceEvent MaintenanceEvent @relation(fields: [maintenanceEventId], references: [id], onDelete: Cascade)
+}
+
+// Documento anexado diretamente a ficha da aeronave (nao a um item especifico)
+model AircraftAttachment {
+  id         String   @id @default(cuid())
+  aircraftId String
+  filename   String
+  url        String
+  size       Int      @default(0)
+  uploadedBy String?
+  createdAt  DateTime @default(now())
+
+  aircraft Aircraft @relation(fields: [aircraftId], references: [id], onDelete: Cascade)
+  uploader User?    @relation(fields: [uploadedBy], references: [id])
 }
 
 // ---------------------------------------------------------------------------

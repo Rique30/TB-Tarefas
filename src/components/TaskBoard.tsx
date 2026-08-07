@@ -20,6 +20,7 @@ import { moveTask } from "@/app/actions/tasks";
 import { TASK_STATUS_LABEL, formatDate, isTaskOverdue } from "@/lib/status";
 import { NewTaskModal } from "@/components/TaskFormModal";
 import { TaskDetailModal } from "@/components/TaskDetailModal";
+import { useSyncedState } from "@/lib/useSyncedState";
 
 export type BoardTask = {
   id: string;
@@ -29,7 +30,7 @@ export type BoardTask = {
   order: number;
   dueDate: string | null;
   startDate: string | null;
-  assignee: { id: string; name: string; color: string } | null;
+  assignees: { id: string; name: string; color: string }[];
   checklistItems: { id: string; done: boolean }[];
   comments: { id: string }[];
   attachments: { id: string }[];
@@ -54,7 +55,7 @@ export function TaskBoard({
   canEdit: boolean;
   openTaskId?: string;
 }) {
-  const [tasks, setTasks] = useState(initialTasks);
+  const [tasks, setTasks] = useSyncedState(initialTasks);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(openTaskId ?? null);
   const [, startTransition] = useTransition();
@@ -229,15 +230,21 @@ function TaskCard({ task, onClick, dragging }: { task: BoardTask; onClick: () =>
           </span>
         )}
       </div>
-      {task.assignee && (
+      {task.assignees.length > 0 && (
         <div className="mt-2 flex items-center gap-1.5">
-          <span
-            className="flex size-5 items-center justify-center rounded-full text-[9px] font-semibold text-white shrink-0"
-            style={{ backgroundColor: task.assignee.color }}
-          >
-            {task.assignee.name.slice(0, 2).toUpperCase()}
-          </span>
-          <span className="text-xs text-muted truncate">{task.assignee.name}</span>
+          <div className="flex -space-x-1.5">
+            {task.assignees.map((a) => (
+              <span
+                key={a.id}
+                title={a.name}
+                className="flex size-5 items-center justify-center rounded-full text-[9px] font-semibold text-white shrink-0 ring-2 ring-surface"
+                style={{ backgroundColor: a.color }}
+              >
+                {a.name.slice(0, 2).toUpperCase()}
+              </span>
+            ))}
+          </div>
+          <span className="text-xs text-muted truncate">{task.assignees.map((a) => a.name).join(", ")}</span>
         </div>
       )}
     </button>

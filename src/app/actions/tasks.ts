@@ -2,19 +2,18 @@
 
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
-import { mkdir, writeFile } from "fs/promises";
-import path from "path";
 import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/auth";
 import { assertAircraftWrite } from "@/lib/permissions";
 import { logAudit } from "@/lib/audit";
 import { TASK_STATUS_LABEL } from "@/lib/status";
+import { MAX_ATTACHMENT_BYTES, saveUploadedFile } from "@/lib/uploads";
 import type { ActionState } from "./aircraft";
 
 const taskSchema = z.object({
   title: z.string().trim().min(1, "Informe um título"),
   description: z.string().trim().optional(),
-  assigneeId: z.string().optional(),
+  assigneeIds: z.array(z.string()).default([]),
   startDate: z.string().optional(),
   dueDate: z.string().optional(),
 });
@@ -38,7 +37,7 @@ export async function createTask(aircraftId: string, _prev: ActionState, formDat
   const parsed = taskSchema.safeParse({
     title: formData.get("title"),
     description: formData.get("description") || undefined,
-    assigneeId: formData.get("assigneeId") || undefined,
+    assigneeIds: formData.getAll("assigneeIds"),
     startDate: formData.get("startDate") || undefined,
     dueDate: formData.get("dueDate") || undefined,
   });
@@ -54,7 +53,7 @@ export async function createTask(aircraftId: string, _prev: ActionState, formDat
       aircraftId,
       title: parsed.data.title,
       description: parsed.data.description,
-      assigneeId: parsed.data.assigneeId || null,
+      assignees: { connect: parsed.data.assigneeIds.map((id) => ({ id })) },
       startDate: toDate(parsed.data.startDate),
       dueDate: toDate(parsed.data.dueDate),
       status: "TODO",
@@ -76,7 +75,7 @@ export async function updateTask(taskId: string, _prev: ActionState, formData: F
   const parsed = taskSchema.safeParse({
     title: formData.get("title"),
     description: formData.get("description") || undefined,
-    assigneeId: formData.get("assigneeId") || undefined,
+    assigneeIds: formData.getAll("assigneeIds"),
     startDate: formData.get("startDate") || undefined,
     dueDate: formData.get("dueDate") || undefined,
   });
@@ -87,7 +86,7 @@ export async function updateTask(taskId: string, _prev: ActionState, formData: F
     data: {
       title: parsed.data.title,
       description: parsed.data.description,
-      assigneeId: parsed.data.assigneeId || null,
+      assignees: { set: parsed.data.assigneeIds.map((id) => ({ id })) },
       startDate: toDate(parsed.data.startDate),
       dueDate: toDate(parsed.data.dueDate),
     },
@@ -172,8 +171,6 @@ export async function addComment(taskId: string, body: string) {
   revalidateAircraft(task.aircraftId);
 }
 
-const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024;
-
 export async function uploadAttachment(taskId: string, formData: FormData): Promise<ActionState> {
   const session = await requireSession();
   const task = await prisma.task.findUniqueOrThrow({ where: { id: taskId } });
@@ -183,19 +180,14 @@ export async function uploadAttachment(taskId: string, formData: FormData): Prom
   if (!(file instanceof File) || file.size === 0) return { error: "Selecione um arquivo" };
   if (file.size > MAX_ATTACHMENT_BYTES) return { error: "Arquivo maior que 10MB" };
 
-  const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
-  const uniqueName = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${safeName}`;
-  const uploadsDir = path.join(process.cwd(), "public", "uploads");
-  await mkdir(uploadsDir, { recursive: true });
-  const buffer = Buffer.from(await file.arrayBuffer());
-  await writeFile(path.join(uploadsDir, uniqueName), buffer);
+  const { url, size } = await saveUploadedFile(file);
 
   await prisma.attachment.create({
     data: {
       taskId,
       filename: file.name,
-      url: `/uploads/${uniqueName}`,
-      size: file.size,
+      url,
+      size,
       uploadedBy: session.id,
     },
   });

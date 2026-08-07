@@ -49,17 +49,17 @@ export function NewTaskModal({
               className="rounded-lg border border-border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-blue focus:border-brand-blue resize-none"
             />
           </label>
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="font-medium text-foreground">Responsável</span>
-            <select name="assigneeId" className="rounded-lg border border-border px-3 py-2 text-sm bg-surface">
-              <option value="">Sem responsável</option>
+          <fieldset className="flex flex-col gap-1.5 text-sm">
+            <legend className="font-medium text-foreground mb-1">Responsáveis</legend>
+            <div className="flex flex-col gap-1 max-h-32 overflow-y-auto rounded-lg border border-border px-3 py-2">
               {assigneeOptions.map((u) => (
-                <option key={u.id} value={u.id}>
+                <label key={u.id} className="flex items-center gap-2">
+                  <input type="checkbox" name="assigneeIds" value={u.id} className="size-3.5 accent-[var(--brand-blue)]" />
                   {u.name}
-                </option>
+                </label>
               ))}
-            </select>
-          </label>
+            </div>
+          </fieldset>
           <div className="grid grid-cols-2 gap-3">
             <label className="flex flex-col gap-1 text-sm">
               <span className="font-medium text-foreground">Início</span>

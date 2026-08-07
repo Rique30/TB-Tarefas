@@ -17,7 +17,10 @@ export default async function AircraftMaintenancePage({ params }: { params: Prom
 
   const events = await prisma.maintenanceEvent.findMany({
     where: { aircraftId },
-    include: { checklistItems: { orderBy: { order: "asc" } } },
+    include: {
+      checklistItems: { orderBy: { order: "asc" } },
+      attachments: { orderBy: { createdAt: "desc" } },
+    },
     orderBy: [{ status: "asc" }, { periodStart: "asc" }],
   });
 
@@ -39,6 +42,7 @@ export default async function AircraftMaintenancePage({ params }: { params: Prom
           periodEnd: e.periodEnd ? e.periodEnd.toISOString() : null,
           completedAt: e.completedAt ? e.completedAt.toISOString() : null,
           checklistItems: e.checklistItems.map((c) => ({ id: c.id, title: c.title, done: c.done })),
+          attachments: e.attachments.map((a) => ({ id: a.id, filename: a.filename, url: a.url, size: a.size })),
         }))}
         canEdit={canEdit}
       />

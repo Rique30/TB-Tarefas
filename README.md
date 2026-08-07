@@ -44,15 +44,19 @@ Troque essas senhas (ou desative os usuários de exemplo, especialmente o admin 
 
 A **Aeronave** (matrícula + modelo) é a entidade central. Cada aeronave tem três módulos:
 
-- **Tarefas** — quadro Kanban (*A fazer / Em andamento / Finalizado*) com responsável, prazos, checklist de
-  subtarefas, comentários e anexos. Existe também uma visão global "por responsável" em `/tasks`.
+- **Tarefas** — quadro Kanban (*A fazer / Em andamento / Finalizado*) com um ou mais responsáveis por tarefa, prazos,
+  checklist de subtarefas, comentários e anexos. Existe também uma visão global "por responsável" em `/tasks` (uma
+  tarefa com vários responsáveis aparece na lista de cada um deles).
 - **Vencimentos** — itens com data de validade (CVA, seguros, laudos PBN/RVSM, INFOSAR/ELT, FISTEL, bote
   salva-vidas, kit de primeiros socorros, conjunto de sobrevivência etc.), categorizados como *porte obrigatório* ou
-  *equipamento*, com status calculado (em dia / vencendo em breve ≤30 dias / vencido). Cada item já guarda
-  `notifyDaysBefore` e existe uma tabela `NotificationLog` — a estrutura está pronta para o envio de e-mails de aviso
-  automático numa fase futura, ainda não implementado.
+  *equipamento*, com status calculado (em dia / vencendo em breve ≤30 dias / vencido) e documentos anexados (PDF/PNG,
+  ex: apólice, certificado escaneado). Cada item já guarda `notifyDaysBefore` e existe uma tabela `NotificationLog` —
+  a estrutura está pronta para o envio de e-mails de aviso automático numa fase futura, ainda não implementado.
 - **Manutenção** — eventos programados (com período) ou não programados (discrepâncias/panes), com escopo,
-  checklist de serviços com progresso e histórico de manutenções concluídas.
+  checklist de serviços com progresso, documentos anexados (PDF/PNG) e histórico de manutenções concluídas.
+
+Além disso, cada aeronave tem uma seção de **documentos gerais da ficha** (PDF/PNG), independente de tarefa,
+vencimento ou manutenção específicos, visível em todas as abas.
 
 Todas as alterações relevantes (criação, mudança de status, comentários, anexos) geram um registro em `AuditLog`,
 exibido no histórico de cada tarefa — auditoria básica pedida no escopo.

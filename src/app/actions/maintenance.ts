@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/auth";
 import { assertAircraftWrite } from "@/lib/permissions";
 import { logAudit } from "@/lib/audit";
+import { assertDocumentFile, saveUploadedFile } from "@/lib/uploads";
 import type { ActionState } from "./aircraft";
 
 const maintenanceSchema = z.object({
@@ -159,4 +160,36 @@ export async function deleteMaintenanceChecklistItem(itemId: string) {
 
   await prisma.maintenanceChecklistItem.delete({ where: { id: itemId } });
   revalidate(item.maintenanceEvent.aircraftId);
+}
+
+export async function uploadMaintenanceAttachment(eventId: string, formData: FormData): Promise<ActionState> {
+  const session = await requireSession();
+  const event = await prisma.maintenanceEvent.findUniqueOrThrow({ where: { id: eventId } });
+  await assertAircraftWrite(session, event.aircraftId);
+
+  const file = formData.get("file");
+  if (!(file instanceof File)) return { error: "Selecione um arquivo" };
+  const error = assertDocumentFile(file);
+  if (error) return { error };
+
+  const { url, size } = await saveUploadedFile(file);
+  await prisma.maintenanceAttachment.create({
+    data: { maintenanceEventId: eventId, filename: file.name, url, size, uploadedBy: session.id },
+  });
+  await logAudit({ entityType: "MaintenanceEvent", entityId: eventId, action: "ATTACHMENT_ADDED", newValue: file.name, user: session });
+
+  revalidate(event.aircraftId);
+  return { success: true };
+}
+
+export async function deleteMaintenanceAttachment(attachmentId: string) {
+  const session = await requireSession();
+  const attachment = await prisma.maintenanceAttachment.findUniqueOrThrow({
+    where: { id: attachmentId },
+    include: { maintenanceEvent: true },
+  });
+  await assertAircraftWrite(session, attachment.maintenanceEvent.aircraftId);
+
+  await prisma.maintenanceAttachment.delete({ where: { id: attachmentId } });
+  revalidate(attachment.maintenanceEvent.aircraftId);
 }
