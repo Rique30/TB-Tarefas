@@ -29,10 +29,13 @@ Acesse `http://localhost:3000`.
 
 ### Login de exemplo (criados pelo seed)
 
-| Perfil | E-mail | Senha |
+No campo de usuário você pode digitar o e-mail completo ou só a parte antes do `@` (ex: `ltavares` em vez de
+`ltavares@tbaviation.com.br`).
+
+| Perfil | Usuário | Senha |
 |---|---|---|
-| Admin de testes | `admin@tbaviation.com.br` | `1234` |
-| Equipe interna (acesso completo) | `rafa@tbaviation.com.br`, `thomas@tbaviation.com.br`, `rafael@tbaviation.com.br`, `matheus@tbaviation.com.br`, `henriquets.2628@gmail.com`, `caio@tbaviation.com.br`, `gabi@tbaviation.com.br`, `luishenrique@tbaviation.com.br` | `tbaviation123` |
+| Admin | `ltavares` | `1234` |
+| Equipe interna (acesso completo) | `rafa`, `thomas`, `rafael`, `matheus`, `caio`, `gabi`, `henriquets.2628@gmail.com` | `tbaviation123` |
 | Cliente / proprietário (leitura, restrito a uma aeronave) | `cliente@exemplo.com` | `cliente123` |
 
 Troque essas senhas (ou desative os usuários de exemplo, especialmente o admin com senha `1234`) antes de usar em produção.
@@ -80,12 +83,15 @@ public/logo-horizontal.png, logo-stacked.png, tb-icon.png   logo oficial da TB A
    provedor (Neon, Supabase, RDS etc.).
 2. Configure a variável de ambiente `DATABASE_URL` no projeto Vercel com a connection string desse banco, e
    `SESSION_SECRET` com uma string aleatória longa.
-3. Rode as migrações contra esse banco antes (ou durante) o primeiro deploy:
+3. Faça o deploy. O build já roda `prisma migrate deploy` automaticamente (script `build` do `package.json`), então
+   as tabelas são criadas/atualizadas sozinhas a cada deploy — não precisa rodar nada manualmente.
+4. Para popular com os dados de exemplo (equipe, aeronaves, tarefas), rode uma vez, apontando para o Postgres da
+   Vercel:
    ```bash
-   DATABASE_URL="<connection string>" npx prisma migrate deploy
-   DATABASE_URL="<connection string>" npx prisma db seed   # opcional, popula dados de exemplo
+   DATABASE_URL="<connection string>" npx prisma db seed
    ```
-   O `postinstall` (`prisma generate`) já roda automaticamente no build da Vercel.
+   O seed usa `upsert` para usuários e aeronaves (seguro rodar de novo), mas cria tarefas/vencimentos/manutenções
+   sempre novos — não rode mais de uma vez em produção, ou os dados de exemplo vão duplicar.
 
 ## Notas para produção
 

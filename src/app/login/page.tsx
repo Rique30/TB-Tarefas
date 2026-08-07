@@ -35,14 +35,14 @@ function LoginForm() {
           <input type="hidden" name="next" value={next} />
 
           <label className="flex flex-col gap-1 text-sm">
-            <span className="font-medium text-foreground">E-mail</span>
+            <span className="font-medium text-foreground">Usuário</span>
             <input
               name="email"
-              type="email"
+              type="text"
               required
-              autoComplete="email"
+              autoComplete="username"
               className="rounded-lg border border-border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-blue focus:border-brand-blue"
-              placeholder="voce@tbaviation.com.br"
+              placeholder="ex: ltavares ou voce@tbaviation.com.br"
             />
           </label>
 
