@@ -2,15 +2,18 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { seedDatabase } from "@/lib/seed-data";
 
+// One-off token for this single-use setup endpoint, not tied to any other secret.
+const SEED_TOKEN = "c0449dafc9112be4a64635bc1a8d94a533f6dcd840c1d065";
+
 /**
  * One-time setup endpoint: populates an empty database with the TB Aviation
  * team, sample aircraft, tasks, expiry items and maintenance events.
  * Refuses to run if the database already has any users, so it can't be used
- * to duplicate data. Requires the SESSION_SECRET as a bearer token.
+ * to duplicate data.
  */
 export async function POST(req: NextRequest) {
   const secret = req.headers.get("x-seed-secret");
-  if (!secret || secret !== process.env.SESSION_SECRET) {
+  if (!secret || secret !== SEED_TOKEN) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
