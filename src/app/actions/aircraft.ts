@@ -13,6 +13,7 @@ const aircraftSchema = z.object({
   model: z.string().trim().min(1, "Informe o modelo"),
   nickname: z.string().trim().optional(),
   notes: z.string().trim().optional(),
+  responsibleIds: z.array(z.string()).default([]),
 });
 
 export type ActionState = { error?: string; success?: boolean };
@@ -24,13 +25,17 @@ export async function createAircraft(_prev: ActionState, formData: FormData): Pr
     model: formData.get("model"),
     nickname: formData.get("nickname") || undefined,
     notes: formData.get("notes") || undefined,
+    responsibleIds: formData.getAll("responsibleIds"),
   });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Dados inválidos" };
 
   const existing = await prisma.aircraft.findUnique({ where: { registration: parsed.data.registration } });
   if (existing) return { error: "Já existe uma aeronave com essa matrícula" };
 
-  const aircraft = await prisma.aircraft.create({ data: parsed.data });
+  const { responsibleIds, ...data } = parsed.data;
+  const aircraft = await prisma.aircraft.create({
+    data: { ...data, responsibles: { connect: responsibleIds.map((id) => ({ id })) } },
+  });
   await logAudit({ entityType: "Aircraft", entityId: aircraft.id, action: "CREATED", user: session });
 
   revalidatePath("/aircraft");
@@ -45,10 +50,15 @@ export async function updateAircraft(aircraftId: string, _prev: ActionState, for
     model: formData.get("model"),
     nickname: formData.get("nickname") || undefined,
     notes: formData.get("notes") || undefined,
+    responsibleIds: formData.getAll("responsibleIds"),
   });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Dados inválidos" };
 
-  await prisma.aircraft.update({ where: { id: aircraftId }, data: parsed.data });
+  const { responsibleIds, ...data } = parsed.data;
+  await prisma.aircraft.update({
+    where: { id: aircraftId },
+    data: { ...data, responsibles: { set: responsibleIds.map((id) => ({ id })) } },
+  });
   await logAudit({ entityType: "Aircraft", entityId: aircraftId, action: "UPDATED", user: session });
 
   revalidatePath("/aircraft");

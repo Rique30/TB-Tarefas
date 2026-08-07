@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { AircraftTabs } from "@/components/AircraftTabs";
 import { EditAircraftButton } from "@/components/AircraftFormModal";
 import { AttachmentsPanel } from "@/components/AttachmentsPanel";
+import { ResponsibleAvatars } from "@/components/ResponsibleAvatars";
 import { uploadAircraftAttachment, deleteAircraftAttachment } from "@/app/actions/aircraft";
 
 export default async function AircraftDetailLayout({
@@ -16,10 +17,13 @@ export default async function AircraftDetailLayout({
   const session = await requireSession();
   const { id } = await params;
 
-  const aircraft = await prisma.aircraft.findUnique({
-    where: { id },
-    include: { attachments: { orderBy: { createdAt: "desc" } } },
-  });
+  const [aircraft, teamMembers] = await Promise.all([
+    prisma.aircraft.findUnique({
+      where: { id },
+      include: { attachments: { orderBy: { createdAt: "desc" } }, responsibles: true },
+    }),
+    prisma.user.findMany({ where: { role: "INTERNAL", active: true }, orderBy: { name: "asc" } }),
+  ]);
   if (!aircraft) notFound();
 
   let canEdit = session.role === "INTERNAL";
@@ -40,8 +44,18 @@ export default async function AircraftDetailLayout({
             {aircraft.registration} <span className="text-muted font-normal">· {aircraft.model}</span>
           </h1>
           {aircraft.nickname && <p className="text-sm text-muted">{aircraft.nickname}</p>}
+          {aircraft.responsibles.length > 0 && (
+            <div className="mt-2">
+              <ResponsibleAvatars people={aircraft.responsibles} size="md" />
+            </div>
+          )}
         </div>
-        {session.role === "INTERNAL" && <EditAircraftButton aircraft={aircraft} />}
+        {session.role === "INTERNAL" && (
+          <EditAircraftButton
+            aircraft={aircraft}
+            teamOptions={teamMembers.map((u) => ({ id: u.id, name: u.name }))}
+          />
+        )}
       </div>
 
       {aircraft.notes && <p className="text-sm text-muted bg-surface border border-border rounded-lg px-3 py-2">{aircraft.notes}</p>}

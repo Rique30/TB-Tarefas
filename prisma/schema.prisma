@@ -60,6 +60,7 @@ model User {
   maintenanceAttachments    MaintenanceAttachment[]
   aircraftAttachments       AircraftAttachment[]
   aircraftAccess            AircraftAccess[]
+  responsibleForAircraft    Aircraft[]             @relation("AircraftResponsibles")
   auditLogs                 AuditLog[]
 }
 
@@ -96,6 +97,7 @@ model Aircraft {
   maintenanceEvents MaintenanceEvent[]
   accessGrants      AircraftAccess[]
   attachments       AircraftAttachment[]
+  responsibles      User[]               @relation("AircraftResponsibles")
 }
 
 // ---------------------------------------------------------------------------

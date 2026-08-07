@@ -8,7 +8,9 @@ import { createAircraft, updateAircraft, type ActionState } from "@/app/actions/
 
 const initialState: ActionState = {};
 
-export function NewAircraftButton() {
+type TeamOption = { id: string; name: string };
+
+export function NewAircraftButton({ teamOptions }: { teamOptions: TeamOption[] }) {
   const [open, setOpen] = useState(false);
   const [state, formAction, pending] = useActionState(createAircraft, initialState);
 
@@ -28,6 +30,7 @@ export function NewAircraftButton() {
           <Field label="Matrícula" name="registration" placeholder="PS-WRA" required />
           <Field label="Modelo" name="model" placeholder="Falcon 900EX" required />
           <Field label="Apelido (opcional)" name="nickname" placeholder="" />
+          <ResponsibleField teamOptions={teamOptions} selectedIds={[]} />
           <TextAreaField label="Observações" name="notes" />
           {state.error && <p className="text-sm text-danger bg-danger-bg rounded-lg px-3 py-2">{state.error}</p>}
           <button
@@ -45,8 +48,17 @@ export function NewAircraftButton() {
 
 export function EditAircraftButton({
   aircraft,
+  teamOptions,
 }: {
-  aircraft: { id: string; registration: string; model: string; nickname: string | null; notes: string | null };
+  aircraft: {
+    id: string;
+    registration: string;
+    model: string;
+    nickname: string | null;
+    notes: string | null;
+    responsibles: { id: string }[];
+  };
+  teamOptions: TeamOption[];
 }) {
   const [open, setOpen] = useState(false);
   const boundAction = updateAircraft.bind(null, aircraft.id);
@@ -68,6 +80,7 @@ export function EditAircraftButton({
           <Field label="Matrícula" name="registration" defaultValue={aircraft.registration} required />
           <Field label="Modelo" name="model" defaultValue={aircraft.model} required />
           <Field label="Apelido (opcional)" name="nickname" defaultValue={aircraft.nickname ?? ""} />
+          <ResponsibleField teamOptions={teamOptions} selectedIds={aircraft.responsibles.map((r) => r.id)} />
           <TextAreaField label="Observações" name="notes" defaultValue={aircraft.notes ?? ""} />
           {state.error && <p className="text-sm text-danger bg-danger-bg rounded-lg px-3 py-2">{state.error}</p>}
           <button
@@ -80,6 +93,28 @@ export function EditAircraftButton({
         </form>
       </Modal>
     </>
+  );
+}
+
+function ResponsibleField({ teamOptions, selectedIds }: { teamOptions: TeamOption[]; selectedIds: string[] }) {
+  return (
+    <fieldset className="flex flex-col gap-1.5 text-sm">
+      <legend className="font-medium text-foreground mb-1">Responsável(is) pela aeronave</legend>
+      <div className="flex flex-col gap-1 max-h-32 overflow-y-auto rounded-lg border border-border px-3 py-2">
+        {teamOptions.map((u) => (
+          <label key={u.id} className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              name="responsibleIds"
+              value={u.id}
+              defaultChecked={selectedIds.includes(u.id)}
+              className="size-3.5 accent-[var(--brand-blue)]"
+            />
+            {u.name}
+          </label>
+        ))}
+      </div>
+    </fieldset>
   );
 }
 
