@@ -4,7 +4,7 @@ import { useRef, useState, useTransition } from "react";
 import { FileText, Trash2, Upload, Loader2 } from "lucide-react";
 import { useSyncedState } from "@/lib/useSyncedState";
 
-const DOCUMENT_ACCEPT = ".pdf,.png,application/pdf,image/png";
+const DOCUMENT_ACCEPT = ".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg";
 
 export type PanelAttachment = { id: string; filename: string; url: string; size: number };
 
@@ -87,7 +87,7 @@ export function AttachmentsPanel({
         </form>
       )}
       {error && <p className="text-sm text-danger bg-danger-bg rounded-lg px-3 py-2">{error}</p>}
-      <p className="text-xs text-muted">Apenas PDF ou PNG, até 10MB.</p>
+      <p className="text-xs text-muted">Apenas PDF, PNG ou JPEG, até 10MB.</p>
     </div>
   );
 }
