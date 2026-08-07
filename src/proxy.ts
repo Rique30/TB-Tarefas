@@ -15,8 +15,6 @@ export async function proxy(req: NextRequest) {
     PUBLIC_PATHS.includes(pathname) ||
     pathname.startsWith("/_next") ||
     pathname.startsWith("/api/auth") ||
-    pathname.startsWith("/api/admin") ||
-    pathname.startsWith("/uploads") ||
     /\.(png|jpg|jpeg|svg|ico|webp|css|js)$/.test(pathname);
 
   const token = req.cookies.get(SESSION_COOKIE)?.value;
