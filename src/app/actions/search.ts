@@ -38,7 +38,7 @@ export async function globalSearch(query: string): Promise<SearchResult[]> {
           { OR: [{ title: { contains: q } }, { description: { contains: q } }] },
         ],
       },
-      include: { aircraft: true, assignee: true },
+      include: { aircraft: true, assignees: true },
       take: 6,
     }),
     prisma.expiryItem.findMany({
@@ -69,7 +69,7 @@ export async function globalSearch(query: string): Promise<SearchResult[]> {
       type: "task",
       id: t.id,
       title: t.title,
-      subtitle: `Tarefa · ${t.aircraft.registration}${t.assignee ? ` · ${t.assignee.name}` : ""}`,
+      subtitle: `Tarefa · ${t.aircraft.registration}${t.assignees.length ? ` · ${t.assignees.map((u) => u.name).join(", ")}` : ""}`,
       href: `/aircraft/${t.aircraftId}/tarefas?task=${t.id}`,
     });
   }

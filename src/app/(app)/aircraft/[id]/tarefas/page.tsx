@@ -24,7 +24,7 @@ export default async function AircraftTasksPage({
   const [tasks, teamMembers] = await Promise.all([
     prisma.task.findMany({
       where: { aircraftId },
-      include: { assignee: true, checklistItems: true, comments: true, attachments: true },
+      include: { assignees: true, checklistItems: true, comments: true, attachments: true },
       orderBy: { order: "asc" },
     }),
     prisma.user.findMany({ where: { role: "INTERNAL", active: true }, orderBy: { name: "asc" } }),
@@ -38,7 +38,7 @@ export default async function AircraftTasksPage({
     order: t.order,
     dueDate: t.dueDate ? t.dueDate.toISOString() : null,
     startDate: t.startDate ? t.startDate.toISOString() : null,
-    assignee: t.assignee ? { id: t.assignee.id, name: t.assignee.name, color: t.assignee.color } : null,
+    assignees: t.assignees.map((a) => ({ id: a.id, name: a.name, color: a.color })),
     checklistItems: t.checklistItems.map((c) => ({ id: c.id, done: c.done })),
     comments: t.comments.map((c) => ({ id: c.id })),
     attachments: t.attachments.map((a) => ({ id: a.id })),

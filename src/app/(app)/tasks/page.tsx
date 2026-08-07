@@ -26,18 +26,18 @@ export default async function GlobalTasksPage({
         ...(params.aircraft ? { aircraftId: params.aircraft } : {}),
         ...(params.status ? { status: params.status as "TODO" | "IN_PROGRESS" | "DONE" } : {}),
       },
-      include: { assignee: true, aircraft: true },
+      include: { assignees: true, aircraft: true },
       orderBy: { dueDate: "asc" },
     }),
   ]);
 
   const grouped = new Map<string, { name: string; color: string; tasks: typeof tasks }>();
   for (const t of tasks) {
-    const key = t.assignee?.id ?? "sem-responsavel";
-    const name = t.assignee?.name ?? "Sem responsável";
-    const color = t.assignee?.color ?? "#8a94a6";
-    if (!grouped.has(key)) grouped.set(key, { name, color, tasks: [] });
-    grouped.get(key)!.tasks.push(t);
+    const members = t.assignees.length > 0 ? t.assignees : [{ id: "sem-responsavel", name: "Sem responsável", color: "#8a94a6" }];
+    for (const member of members) {
+      if (!grouped.has(member.id)) grouped.set(member.id, { name: member.name, color: member.color, tasks: [] });
+      grouped.get(member.id)!.tasks.push(t);
+    }
   }
   const groups = [...grouped.values()].sort((a, b) => b.tasks.length - a.tasks.length);
 

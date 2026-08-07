@@ -3,6 +3,8 @@ import { requireSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { AircraftTabs } from "@/components/AircraftTabs";
 import { EditAircraftButton } from "@/components/AircraftFormModal";
+import { AttachmentsPanel } from "@/components/AttachmentsPanel";
+import { uploadAircraftAttachment, deleteAircraftAttachment } from "@/app/actions/aircraft";
 
 export default async function AircraftDetailLayout({
   children,
@@ -14,14 +16,19 @@ export default async function AircraftDetailLayout({
   const session = await requireSession();
   const { id } = await params;
 
-  const aircraft = await prisma.aircraft.findUnique({ where: { id } });
+  const aircraft = await prisma.aircraft.findUnique({
+    where: { id },
+    include: { attachments: { orderBy: { createdAt: "desc" } } },
+  });
   if (!aircraft) notFound();
 
+  let canEdit = session.role === "INTERNAL";
   if (session.role === "CLIENT") {
     const grant = await prisma.aircraftAccess.findUnique({
       where: { userId_aircraftId: { userId: session.id, aircraftId: id } },
     });
     if (!grant) notFound();
+    canEdit = grant.canEdit;
   }
 
   return (
@@ -38,6 +45,21 @@ export default async function AircraftDetailLayout({
       </div>
 
       {aircraft.notes && <p className="text-sm text-muted bg-surface border border-border rounded-lg px-3 py-2">{aircraft.notes}</p>}
+
+      <details className="bg-surface border border-border rounded-lg px-3 py-2.5">
+        <summary className="text-sm font-medium text-foreground cursor-pointer select-none">
+          Documentos da aeronave ({aircraft.attachments.length})
+        </summary>
+        <div className="mt-3">
+          <AttachmentsPanel
+            title=""
+            attachments={aircraft.attachments.map((a) => ({ id: a.id, filename: a.filename, url: a.url, size: a.size }))}
+            canEdit={canEdit}
+            onUpload={uploadAircraftAttachment.bind(null, aircraft.id)}
+            onDelete={deleteAircraftAttachment}
+          />
+        </div>
+      </details>
 
       <AircraftTabs aircraftId={aircraft.id} />
 

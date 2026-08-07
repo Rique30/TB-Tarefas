@@ -43,17 +43,21 @@ export default async function DashboardPage({
   const [openTasks, overdueTasks, expiringItems, activeMaintenance, allExpiryForCount, allMaintenanceForCount] =
     await Promise.all([
       prisma.task.findMany({
-        where: { aircraftId: { in: aircraftIds }, status: { not: "DONE" }, ...(selectedResponsible ? { assigneeId: selectedResponsible } : {}) },
-        include: { aircraft: true, assignee: true },
+        where: {
+          aircraftId: { in: aircraftIds },
+          status: { not: "DONE" },
+          ...(selectedResponsible ? { assignees: { some: { id: selectedResponsible } } } : {}),
+        },
+        include: { aircraft: true, assignees: true },
       }),
       prisma.task.findMany({
         where: {
           aircraftId: { in: aircraftIds },
           status: { not: "DONE" },
           dueDate: { lt: now },
-          ...(selectedResponsible ? { assigneeId: selectedResponsible } : {}),
+          ...(selectedResponsible ? { assignees: { some: { id: selectedResponsible } } } : {}),
         },
-        include: { aircraft: true, assignee: true },
+        include: { aircraft: true, assignees: true },
         orderBy: { dueDate: "asc" },
       }),
       prisma.expiryItem.findMany({
@@ -82,11 +86,11 @@ export default async function DashboardPage({
 
   const overdueByResponsible = new Map<string, { name: string; color: string; tasks: typeof overdueTasks }>();
   for (const t of overdueTasks) {
-    const key = t.assignee?.id ?? "sem-responsavel";
-    const name = t.assignee?.name ?? "Sem responsável";
-    const color = t.assignee?.color ?? "#8a94a6";
-    if (!overdueByResponsible.has(key)) overdueByResponsible.set(key, { name, color, tasks: [] });
-    overdueByResponsible.get(key)!.tasks.push(t);
+    const members = t.assignees.length > 0 ? t.assignees : [{ id: "sem-responsavel", name: "Sem responsável", color: "#8a94a6" }];
+    for (const member of members) {
+      if (!overdueByResponsible.has(member.id)) overdueByResponsible.set(member.id, { name: member.name, color: member.color, tasks: [] });
+      overdueByResponsible.get(member.id)!.tasks.push(t);
+    }
   }
 
   const pendingByAircraft = allAircraft.map((a) => {

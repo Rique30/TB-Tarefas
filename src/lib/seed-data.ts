@@ -1,4 +1,3 @@
-import "server-only";
 import bcrypt from "bcryptjs";
 import type { PrismaClient } from "@/generated/prisma/client";
 
@@ -88,7 +87,7 @@ export async function seedDatabase(prisma: PrismaClient) {
     aircraft: string;
     title: string;
     description: string;
-    assignee: string;
+    assignees: string[];
     status: "TODO" | "IN_PROGRESS" | "DONE";
     dueInDays: number;
     checklist: string[];
@@ -97,7 +96,7 @@ export async function seedDatabase(prisma: PrismaClient) {
       aircraft: "PS-WRA",
       title: "Renovar apólice de seguro casco",
       description: "Contatar corretora e enviar documentação atualizada da aeronave.",
-      assignee: "Rafa",
+      assignees: ["Rafa"],
       status: "IN_PROGRESS",
       dueInDays: 12,
       checklist: ["Solicitar cotação", "Enviar documentos", "Assinar apólice"],
@@ -106,7 +105,7 @@ export async function seedDatabase(prisma: PrismaClient) {
       aircraft: "PS-WRA",
       title: "Agendar inspeção de rotina com o proprietário",
       description: "",
-      assignee: "Thomas",
+      assignees: ["Thomas"],
       status: "TODO",
       dueInDays: -3,
       checklist: [],
@@ -115,7 +114,7 @@ export async function seedDatabase(prisma: PrismaClient) {
       aircraft: "PS-WRA",
       title: "Atualizar cadastro ANAC",
       description: "Conferir dados cadastrais após troca de tripulação.",
-      assignee: "Henrique",
+      assignees: ["Henrique"],
       status: "DONE",
       dueInDays: -10,
       checklist: ["Conferir dados", "Protocolar atualização"],
@@ -124,7 +123,7 @@ export async function seedDatabase(prisma: PrismaClient) {
       aircraft: "PP-JMJ",
       title: "Levantar orçamento de manutenção não programada",
       description: "Discrepância reportada pela tripulação — ver detalhes na aba Manutenção.",
-      assignee: "Rafael",
+      assignees: ["Rafael", "Matheus"],
       status: "IN_PROGRESS",
       dueInDays: 4,
       checklist: ["Diagnóstico", "Orçamento com oficina", "Aprovação do proprietário"],
@@ -133,7 +132,7 @@ export async function seedDatabase(prisma: PrismaClient) {
       aircraft: "PP-JMJ",
       title: "Enviar relatório mensal ao proprietário",
       description: "",
-      assignee: "Matheus",
+      assignees: ["Matheus"],
       status: "TODO",
       dueInDays: 6,
       checklist: [],
@@ -142,7 +141,7 @@ export async function seedDatabase(prisma: PrismaClient) {
       aircraft: "PR-TBX",
       title: "Revisar checklist de sobrevivência selva/mar",
       description: "Conferir validade dos kits antes da próxima viagem internacional.",
-      assignee: "Caio",
+      assignees: ["Caio"],
       status: "TODO",
       dueInDays: -1,
       checklist: ["Conferir kit selva", "Conferir bote salva-vidas"],
@@ -151,7 +150,7 @@ export async function seedDatabase(prisma: PrismaClient) {
       aircraft: "PR-TBX",
       title: "Negociar renovação do contrato de hangaragem",
       description: "",
-      assignee: "Gabi",
+      assignees: ["Gabi", "Caio", "Rafa"],
       status: "IN_PROGRESS",
       dueInDays: 20,
       checklist: [],
@@ -164,7 +163,7 @@ export async function seedDatabase(prisma: PrismaClient) {
         aircraftId: aircraft[t.aircraft].id,
         title: t.title,
         description: t.description || null,
-        assigneeId: users[t.assignee].id,
+        assignees: { connect: t.assignees.map((name) => ({ id: users[name].id })) },
         status: t.status,
         startDate: daysFromNow(t.dueInDays - 7),
         dueDate: daysFromNow(t.dueInDays),
@@ -178,7 +177,7 @@ export async function seedDatabase(prisma: PrismaClient) {
     }
     if (t.status !== "TODO") {
       await prisma.comment.create({
-        data: { taskId: task.id, authorId: users[t.assignee].id, body: "Iniciado — acompanhando andamento." },
+        data: { taskId: task.id, authorId: users[t.assignees[0]].id, body: "Iniciado — acompanhando andamento." },
       });
     }
   }

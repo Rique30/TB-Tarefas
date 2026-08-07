@@ -1,14 +1,18 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef } from "react";
 import { Trash2, Wrench, History } from "lucide-react";
 import { Badge, maintenanceStatusTone } from "@/components/Badge";
 import { EditMaintenanceButton } from "@/components/MaintenanceFormModal";
+import { AttachmentsPanel } from "@/components/AttachmentsPanel";
+import { useSyncedState } from "@/lib/useSyncedState";
 import {
   addMaintenanceChecklistItem,
   toggleMaintenanceChecklistItem,
   deleteMaintenanceChecklistItem,
   deleteMaintenanceEvent,
+  uploadMaintenanceAttachment,
+  deleteMaintenanceAttachment,
 } from "@/app/actions/maintenance";
 import { MAINTENANCE_STATUS_LABEL, MAINTENANCE_TYPE_LABEL, formatDate } from "@/lib/status";
 
@@ -23,6 +27,7 @@ export type MaintenanceRow = {
   periodEnd: string | null;
   completedAt: string | null;
   checklistItems: { id: string; title: string; done: boolean }[];
+  attachments: { id: string; filename: string; url: string; size: number }[];
 };
 
 export function MaintenanceList({ events, canEdit }: { events: MaintenanceRow[]; canEdit: boolean }) {
@@ -88,7 +93,7 @@ export function MaintenanceList({ events, canEdit }: { events: MaintenanceRow[];
 }
 
 function MaintenanceCard({ event, canEdit }: { event: MaintenanceRow; canEdit: boolean }) {
-  const [items, setItems] = useState(event.checklistItems);
+  const [items, setItems] = useSyncedState(event.checklistItems);
   const inputRef = useRef<HTMLInputElement>(null);
   const done = items.filter((i) => i.done).length;
 
@@ -197,6 +202,15 @@ function MaintenanceCard({ event, canEdit }: { event: MaintenanceRow; canEdit: b
           </button>
         </form>
       )}
+
+      <div className="mt-4 pt-4 border-t border-border">
+        <AttachmentsPanel
+          attachments={event.attachments}
+          canEdit={canEdit}
+          onUpload={(fd) => uploadMaintenanceAttachment(event.id, fd)}
+          onDelete={deleteMaintenanceAttachment}
+        />
+      </div>
     </div>
   );
 }

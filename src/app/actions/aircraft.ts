@@ -3,8 +3,10 @@
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { requireInternal } from "@/lib/auth";
+import { requireInternal, requireSession } from "@/lib/auth";
+import { assertAircraftWrite } from "@/lib/permissions";
 import { logAudit } from "@/lib/audit";
+import { assertDocumentFile, saveUploadedFile } from "@/lib/uploads";
 
 const aircraftSchema = z.object({
   registration: z.string().trim().min(2, "Informe a matrícula").toUpperCase(),
@@ -65,4 +67,32 @@ export async function setAircraftActive(aircraftId: string, active: boolean) {
   });
   revalidatePath("/aircraft");
   revalidatePath("/");
+}
+
+export async function uploadAircraftAttachment(aircraftId: string, formData: FormData): Promise<ActionState> {
+  const session = await requireSession();
+  await assertAircraftWrite(session, aircraftId);
+
+  const file = formData.get("file");
+  if (!(file instanceof File)) return { error: "Selecione um arquivo" };
+  const error = assertDocumentFile(file);
+  if (error) return { error };
+
+  const { url, size } = await saveUploadedFile(file);
+  await prisma.aircraftAttachment.create({
+    data: { aircraftId, filename: file.name, url, size, uploadedBy: session.id },
+  });
+  await logAudit({ entityType: "Aircraft", entityId: aircraftId, action: "ATTACHMENT_ADDED", newValue: file.name, user: session });
+
+  revalidatePath(`/aircraft/${aircraftId}`);
+  return { success: true };
+}
+
+export async function deleteAircraftAttachment(attachmentId: string) {
+  const session = await requireSession();
+  const attachment = await prisma.aircraftAttachment.findUniqueOrThrow({ where: { id: attachmentId } });
+  await assertAircraftWrite(session, attachment.aircraftId);
+
+  await prisma.aircraftAttachment.delete({ where: { id: attachmentId } });
+  revalidatePath(`/aircraft/${attachment.aircraftId}`);
 }
