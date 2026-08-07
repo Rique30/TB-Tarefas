@@ -3,9 +3,9 @@ export type ExpiryStatus = "VENCIDO" | "VENCENDO" | "EM_DIA";
 const DAY_MS = 1000 * 60 * 60 * 24;
 
 export function daysUntil(date: Date, from: Date = new Date()): number {
-  const a = new Date(from.getFullYear(), from.getMonth(), from.getDate());
-  const b = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-  return Math.round((b.getTime() - a.getTime()) / DAY_MS);
+  const a = Date.UTC(from.getUTCFullYear(), from.getUTCMonth(), from.getUTCDate());
+  const b = Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
+  return Math.round((b - a) / DAY_MS);
 }
 
 export function expiryStatus(dueDate: Date, warnDays = 30, from: Date = new Date()): ExpiryStatus {
@@ -51,7 +51,7 @@ export function isTaskOverdue(dueDate: Date | null, status: string, from: Date =
 export function formatDate(date: Date | string | null | undefined): string {
   if (!date) return "-";
   const d = typeof date === "string" ? new Date(date) : date;
-  return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" });
+  return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", timeZone: "UTC" });
 }
 
 export function formatDateTime(date: Date | string | null | undefined): string {

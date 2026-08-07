@@ -58,22 +58,24 @@ export function AttachmentsPanel({
           className="flex items-center gap-2"
           onSubmit={(e) => {
             e.preventDefault();
-            const file = fileRef.current?.files?.[0];
-            if (!file) return;
+            const files = fileRef.current?.files;
+            if (!files || files.length === 0) return;
             setError(null);
-            const fd = new FormData();
-            fd.set("file", file);
+            const selected = Array.from(files);
             startUpload(async () => {
-              const result = await onUpload(fd);
-              if (result.error) {
-                setError(result.error);
-                return;
+              const errors: string[] = [];
+              for (const file of selected) {
+                const fd = new FormData();
+                fd.set("file", file);
+                const result = await onUpload(fd);
+                if (result.error) errors.push(`${file.name}: ${result.error}`);
               }
+              if (errors.length > 0) setError(errors.join(" · "));
               if (fileRef.current) fileRef.current.value = "";
             });
           }}
         >
-          <input ref={fileRef} type="file" accept={DOCUMENT_ACCEPT} className="text-xs flex-1" />
+          <input ref={fileRef} type="file" accept={DOCUMENT_ACCEPT} multiple className="text-xs flex-1" />
           <button
             type="submit"
             disabled={uploading}

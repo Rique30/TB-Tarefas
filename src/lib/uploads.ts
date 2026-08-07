@@ -1,6 +1,4 @@
 import "server-only";
-import { mkdir, writeFile } from "fs/promises";
-import path from "path";
 
 export const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024;
 
@@ -14,13 +12,8 @@ export function assertDocumentFile(file: File): string | null {
   return null;
 }
 
-/** Saves an uploaded file under public/uploads and returns its public URL. */
-export async function saveUploadedFile(file: File): Promise<{ url: string; size: number }> {
-  const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
-  const uniqueName = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${safeName}`;
-  const uploadsDir = path.join(process.cwd(), "public", "uploads");
-  await mkdir(uploadsDir, { recursive: true });
-  const buffer = Buffer.from(await file.arrayBuffer());
-  await writeFile(path.join(uploadsDir, uniqueName), buffer);
-  return { url: `/uploads/${uniqueName}`, size: file.size };
+/** Reads an uploaded file's bytes so it can be stored directly in the database. */
+export async function readUploadedFile(file: File): Promise<{ data: Uint8Array<ArrayBuffer>; mimeType: string; size: number }> {
+  const data = new Uint8Array(await file.arrayBuffer());
+  return { data, mimeType: file.type, size: file.size };
 }

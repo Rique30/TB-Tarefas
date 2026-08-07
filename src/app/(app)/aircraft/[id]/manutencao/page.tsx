@@ -19,7 +19,7 @@ export default async function AircraftMaintenancePage({ params }: { params: Prom
     where: { aircraftId },
     include: {
       checklistItems: { orderBy: { order: "asc" } },
-      attachments: { orderBy: { createdAt: "desc" } },
+      attachments: { select: { id: true, filename: true, size: true }, orderBy: { createdAt: "desc" } },
     },
     orderBy: [{ status: "asc" }, { periodStart: "asc" }],
   });
@@ -42,7 +42,7 @@ export default async function AircraftMaintenancePage({ params }: { params: Prom
           periodEnd: e.periodEnd ? e.periodEnd.toISOString() : null,
           completedAt: e.completedAt ? e.completedAt.toISOString() : null,
           checklistItems: e.checklistItems.map((c) => ({ id: c.id, title: c.title, done: c.done })),
-          attachments: e.attachments.map((a) => ({ id: a.id, filename: a.filename, url: a.url, size: a.size })),
+          attachments: e.attachments.map((a) => ({ id: a.id, filename: a.filename, url: `/api/files/maintenance/${a.id}`, size: a.size })),
         }))}
         canEdit={canEdit}
       />

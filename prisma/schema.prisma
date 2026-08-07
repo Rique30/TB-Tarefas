@@ -153,7 +153,8 @@ model Attachment {
   id         String   @id @default(cuid())
   taskId     String
   filename   String
-  url        String
+  mimeType   String
+  data       Bytes
   size       Int      @default(0)
   uploadedBy String?
   createdAt  DateTime @default(now())
@@ -187,7 +188,8 @@ model ExpiryAttachment {
   id           String   @id @default(cuid())
   expiryItemId String
   filename     String
-  url          String
+  mimeType     String
+  data         Bytes
   size         Int      @default(0)
   uploadedBy   String?
   createdAt    DateTime @default(now())
@@ -235,7 +237,8 @@ model MaintenanceAttachment {
   id                  String   @id @default(cuid())
   maintenanceEventId  String
   filename            String
-  url                 String
+  mimeType            String
+  data                Bytes
   size                Int      @default(0)
   uploadedBy          String?
   createdAt           DateTime @default(now())
@@ -259,7 +262,8 @@ model AircraftAttachment {
   id         String   @id @default(cuid())
   aircraftId String
   filename   String
-  url        String
+  mimeType   String
+  data       Bytes
   size       Int      @default(0)
   uploadedBy String?
   createdAt  DateTime @default(now())
