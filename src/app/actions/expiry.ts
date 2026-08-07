@@ -6,7 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/auth";
 import { assertAircraftWrite } from "@/lib/permissions";
 import { logAudit } from "@/lib/audit";
-import { assertDocumentFile, saveUploadedFile } from "@/lib/uploads";
+import { assertDocumentFile, readUploadedFile } from "@/lib/uploads";
 import type { ActionState } from "./aircraft";
 
 const expirySchema = z.object({
@@ -96,9 +96,9 @@ export async function uploadExpiryAttachment(itemId: string, formData: FormData)
   const error = assertDocumentFile(file);
   if (error) return { error };
 
-  const { url, size } = await saveUploadedFile(file);
+  const { data, mimeType, size } = await readUploadedFile(file);
   await prisma.expiryAttachment.create({
-    data: { expiryItemId: itemId, filename: file.name, url, size, uploadedBy: session.id },
+    data: { expiryItemId: itemId, filename: file.name, mimeType, data, size, uploadedBy: session.id },
   });
   await logAudit({ entityType: "ExpiryItem", entityId: itemId, action: "ATTACHMENT_ADDED", newValue: file.name, user: session });
 
@@ -110,7 +110,7 @@ export async function deleteExpiryAttachment(attachmentId: string) {
   const session = await requireSession();
   const attachment = await prisma.expiryAttachment.findUniqueOrThrow({
     where: { id: attachmentId },
-    include: { expiryItem: true },
+    select: { expiryItem: { select: { aircraftId: true } } },
   });
   await assertAircraftWrite(session, attachment.expiryItem.aircraftId);
 

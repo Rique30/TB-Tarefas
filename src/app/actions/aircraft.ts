@@ -6,7 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { requireInternal, requireSession } from "@/lib/auth";
 import { assertAircraftWrite } from "@/lib/permissions";
 import { logAudit } from "@/lib/audit";
-import { assertDocumentFile, saveUploadedFile } from "@/lib/uploads";
+import { assertDocumentFile, readUploadedFile } from "@/lib/uploads";
 
 const aircraftSchema = z.object({
   registration: z.string().trim().min(2, "Informe a matrícula").toUpperCase(),
@@ -88,9 +88,9 @@ export async function uploadAircraftAttachment(aircraftId: string, formData: For
   const error = assertDocumentFile(file);
   if (error) return { error };
 
-  const { url, size } = await saveUploadedFile(file);
+  const { data, mimeType, size } = await readUploadedFile(file);
   await prisma.aircraftAttachment.create({
-    data: { aircraftId, filename: file.name, url, size, uploadedBy: session.id },
+    data: { aircraftId, filename: file.name, mimeType, data, size, uploadedBy: session.id },
   });
   await logAudit({ entityType: "Aircraft", entityId: aircraftId, action: "ATTACHMENT_ADDED", newValue: file.name, user: session });
 
@@ -100,7 +100,10 @@ export async function uploadAircraftAttachment(aircraftId: string, formData: For
 
 export async function deleteAircraftAttachment(attachmentId: string) {
   const session = await requireSession();
-  const attachment = await prisma.aircraftAttachment.findUniqueOrThrow({ where: { id: attachmentId } });
+  const attachment = await prisma.aircraftAttachment.findUniqueOrThrow({
+    where: { id: attachmentId },
+    select: { aircraftId: true },
+  });
   await assertAircraftWrite(session, attachment.aircraftId);
 
   await prisma.aircraftAttachment.delete({ where: { id: attachmentId } });

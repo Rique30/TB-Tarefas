@@ -6,7 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/auth";
 import { assertAircraftWrite } from "@/lib/permissions";
 import { logAudit } from "@/lib/audit";
-import { assertDocumentFile, saveUploadedFile } from "@/lib/uploads";
+import { assertDocumentFile, readUploadedFile } from "@/lib/uploads";
 import type { ActionState } from "./aircraft";
 
 const maintenanceSchema = z.object({
@@ -172,9 +172,9 @@ export async function uploadMaintenanceAttachment(eventId: string, formData: For
   const error = assertDocumentFile(file);
   if (error) return { error };
 
-  const { url, size } = await saveUploadedFile(file);
+  const { data, mimeType, size } = await readUploadedFile(file);
   await prisma.maintenanceAttachment.create({
-    data: { maintenanceEventId: eventId, filename: file.name, url, size, uploadedBy: session.id },
+    data: { maintenanceEventId: eventId, filename: file.name, mimeType, data, size, uploadedBy: session.id },
   });
   await logAudit({ entityType: "MaintenanceEvent", entityId: eventId, action: "ATTACHMENT_ADDED", newValue: file.name, user: session });
 
@@ -186,7 +186,7 @@ export async function deleteMaintenanceAttachment(attachmentId: string) {
   const session = await requireSession();
   const attachment = await prisma.maintenanceAttachment.findUniqueOrThrow({
     where: { id: attachmentId },
-    include: { maintenanceEvent: true },
+    select: { maintenanceEvent: { select: { aircraftId: true } } },
   });
   await assertAircraftWrite(session, attachment.maintenanceEvent.aircraftId);
 

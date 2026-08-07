@@ -7,7 +7,7 @@ import { requireSession } from "@/lib/auth";
 import { assertAircraftWrite } from "@/lib/permissions";
 import { logAudit } from "@/lib/audit";
 import { TASK_STATUS_LABEL } from "@/lib/status";
-import { MAX_ATTACHMENT_BYTES, saveUploadedFile } from "@/lib/uploads";
+import { assertDocumentFile, readUploadedFile } from "@/lib/uploads";
 import type { ActionState } from "./aircraft";
 
 const taskSchema = z.object({
@@ -177,16 +177,18 @@ export async function uploadAttachment(taskId: string, formData: FormData): Prom
   await assertAircraftWrite(session, task.aircraftId);
 
   const file = formData.get("file");
-  if (!(file instanceof File) || file.size === 0) return { error: "Selecione um arquivo" };
-  if (file.size > MAX_ATTACHMENT_BYTES) return { error: "Arquivo maior que 10MB" };
+  if (!(file instanceof File)) return { error: "Selecione um arquivo" };
+  const fileError = assertDocumentFile(file);
+  if (fileError) return { error: fileError };
 
-  const { url, size } = await saveUploadedFile(file);
+  const { data, mimeType, size } = await readUploadedFile(file);
 
   await prisma.attachment.create({
     data: {
       taskId,
       filename: file.name,
-      url,
+      mimeType,
+      data,
       size,
       uploadedBy: session.id,
     },
@@ -204,7 +206,10 @@ export async function getTaskDetail(taskId: string) {
     include: {
       checklistItems: { orderBy: { order: "asc" } },
       comments: { include: { author: true }, orderBy: { createdAt: "asc" } },
-      attachments: { include: { uploader: true }, orderBy: { createdAt: "desc" } },
+      attachments: {
+        select: { id: true, filename: true, size: true, createdAt: true, uploader: true },
+        orderBy: { createdAt: "desc" },
+      },
     },
   });
   const auditLogs = await prisma.auditLog.findMany({
@@ -212,14 +217,20 @@ export async function getTaskDetail(taskId: string) {
     orderBy: { createdAt: "desc" },
     take: 15,
   });
-  return { task, auditLogs };
+  return {
+    task: {
+      ...task,
+      attachments: task.attachments.map((a) => ({ ...a, url: `/api/files/task/${a.id}` })),
+    },
+    auditLogs,
+  };
 }
 
 export async function deleteAttachment(attachmentId: string) {
   const session = await requireSession();
   const attachment = await prisma.attachment.findUniqueOrThrow({
     where: { id: attachmentId },
-    include: { task: true },
+    select: { task: { select: { aircraftId: true } } },
   });
   await assertAircraftWrite(session, attachment.task.aircraftId);
 

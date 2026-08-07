@@ -20,7 +20,10 @@ export default async function AircraftDetailLayout({
   const [aircraft, teamMembers] = await Promise.all([
     prisma.aircraft.findUnique({
       where: { id },
-      include: { attachments: { orderBy: { createdAt: "desc" } }, responsibles: true },
+      include: {
+        attachments: { select: { id: true, filename: true, size: true }, orderBy: { createdAt: "desc" } },
+        responsibles: true,
+      },
     }),
     prisma.user.findMany({ where: { role: "INTERNAL", active: true }, orderBy: { name: "asc" } }),
   ]);
@@ -67,7 +70,7 @@ export default async function AircraftDetailLayout({
         <div className="mt-3">
           <AttachmentsPanel
             title=""
-            attachments={aircraft.attachments.map((a) => ({ id: a.id, filename: a.filename, url: a.url, size: a.size }))}
+            attachments={aircraft.attachments.map((a) => ({ id: a.id, filename: a.filename, url: `/api/files/aircraft/${a.id}`, size: a.size }))}
             canEdit={canEdit}
             onUpload={uploadAircraftAttachment.bind(null, aircraft.id)}
             onDelete={deleteAircraftAttachment}

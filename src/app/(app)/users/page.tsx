@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { requireInternal } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { NewUserButton } from "@/components/UserFormModal";
@@ -10,7 +11,10 @@ export default async function UsersPage() {
   const [users, aircraftList] = await Promise.all([
     prisma.user.findMany({
       orderBy: [{ role: "asc" }, { name: "asc" }],
-      include: { aircraftAccess: { include: { aircraft: true } } },
+      include: {
+        aircraftAccess: { include: { aircraft: true } },
+        responsibleForAircraft: { where: { active: true }, orderBy: { registration: "asc" } },
+      },
     }),
     prisma.aircraft.findMany({ where: { active: true }, orderBy: { registration: "asc" } }),
   ]);
@@ -36,6 +40,7 @@ export default async function UsersPage() {
               <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted">
                 <th className="px-4 py-2.5 font-medium">Nome</th>
                 <th className="px-4 py-2.5 font-medium">E-mail</th>
+                <th className="px-4 py-2.5 font-medium">Cuida de</th>
                 <th className="px-4 py-2.5 font-medium">Status</th>
               </tr>
             </thead>
@@ -54,6 +59,23 @@ export default async function UsersPage() {
                     </div>
                   </td>
                   <td className="px-4 py-2.5 text-muted">{u.email}</td>
+                  <td className="px-4 py-2.5">
+                    {u.responsibleForAircraft.length > 0 ? (
+                      <div className="flex flex-wrap gap-1">
+                        {u.responsibleForAircraft.map((a) => (
+                          <Link
+                            key={a.id}
+                            href={`/aircraft/${a.id}/tarefas`}
+                            className="rounded-md bg-background border border-border px-1.5 py-0.5 text-xs text-foreground hover:border-brand-blue hover:text-brand-blue transition-colors"
+                          >
+                            {a.registration}
+                          </Link>
+                        ))}
+                      </div>
+                    ) : (
+                      <span className="text-xs text-muted">-</span>
+                    )}
+                  </td>
                   <td className="px-4 py-2.5">
                     <UserActiveToggle userId={u.id} active={u.active} />
                   </td>

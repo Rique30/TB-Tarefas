@@ -17,7 +17,7 @@ export default async function AircraftExpiryPage({ params }: { params: Promise<{
 
   const items = await prisma.expiryItem.findMany({
     where: { aircraftId },
-    include: { attachments: { orderBy: { createdAt: "desc" } } },
+    include: { attachments: { select: { id: true, filename: true, size: true }, orderBy: { createdAt: "desc" } } },
     orderBy: { dueDate: "asc" },
   });
 
@@ -35,7 +35,7 @@ export default async function AircraftExpiryPage({ params }: { params: Promise<{
           dueDate: i.dueDate.toISOString(),
           notifyDaysBefore: i.notifyDaysBefore,
           notes: i.notes,
-          attachments: i.attachments.map((a) => ({ id: a.id, filename: a.filename, url: a.url, size: a.size })),
+          attachments: i.attachments.map((a) => ({ id: a.id, filename: a.filename, url: `/api/files/expiry/${a.id}`, size: a.size })),
         }))}
         canEdit={canEdit}
       />
