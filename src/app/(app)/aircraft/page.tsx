@@ -4,6 +4,7 @@ import { requireSession } from "@/lib/auth";
 import { getAccessibleAircraftIds } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { NewAircraftButton } from "@/components/AircraftFormModal";
+import { ResponsibleAvatars } from "@/components/ResponsibleAvatars";
 import { expiryStatus } from "@/lib/status";
 import { Badge } from "@/components/Badge";
 
@@ -11,15 +12,19 @@ export default async function AircraftListPage() {
   const session = await requireSession();
   const accessible = await getAccessibleAircraftIds(session);
 
-  const aircraftList = await prisma.aircraft.findMany({
-    where: { active: true, ...(accessible ? { id: { in: accessible } } : {}) },
-    orderBy: { registration: "asc" },
-    include: {
-      tasks: { where: { status: { not: "DONE" } }, select: { id: true } },
-      expiryItems: { select: { id: true, dueDate: true } },
-      maintenanceEvents: { where: { status: { not: "CONCLUIDA" } }, select: { id: true } },
-    },
-  });
+  const [aircraftList, teamMembers] = await Promise.all([
+    prisma.aircraft.findMany({
+      where: { active: true, ...(accessible ? { id: { in: accessible } } : {}) },
+      orderBy: { registration: "asc" },
+      include: {
+        tasks: { where: { status: { not: "DONE" } }, select: { id: true } },
+        expiryItems: { select: { id: true, dueDate: true } },
+        maintenanceEvents: { where: { status: { not: "CONCLUIDA" } }, select: { id: true } },
+        responsibles: true,
+      },
+    }),
+    prisma.user.findMany({ where: { role: "INTERNAL", active: true }, orderBy: { name: "asc" } }),
+  ]);
 
   return (
     <div className="flex flex-col gap-5">
@@ -28,7 +33,9 @@ export default async function AircraftListPage() {
           <h1 className="text-xl font-semibold text-foreground">Frota</h1>
           <p className="text-sm text-muted mt-0.5">{aircraftList.length} aeronave(s) na frota TB Aviation.</p>
         </div>
-        {session.role === "INTERNAL" && <NewAircraftButton />}
+        {session.role === "INTERNAL" && (
+          <NewAircraftButton teamOptions={teamMembers.map((u) => ({ id: u.id, name: u.name }))} />
+        )}
       </div>
 
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -54,6 +61,11 @@ export default async function AircraftListPage() {
                 <Badge tone={expiryAlerts ? "warning" : "success"}>{expiryAlerts} vencimento(s)</Badge>
                 <Badge tone={a.maintenanceEvents.length ? "brand" : "neutral"}>{a.maintenanceEvents.length} manutenção(ões)</Badge>
               </div>
+              {a.responsibles.length > 0 && (
+                <div className="mt-3">
+                  <ResponsibleAvatars people={a.responsibles} />
+                </div>
+              )}
             </Link>
           );
         })}

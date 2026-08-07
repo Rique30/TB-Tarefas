@@ -49,17 +49,22 @@ export async function seedDatabase(prisma: PrismaClient) {
   });
 
   const aircraftData = [
-    { registration: "PS-WRA", model: "Falcon 900EX", nickname: "Falcon 1" },
-    { registration: "PP-JMJ", model: "Phenom 300", nickname: null },
-    { registration: "PR-TBX", model: "Legacy 650", nickname: null },
+    { registration: "PS-WRA", model: "Falcon 900EX", nickname: "Falcon 1", responsibles: ["Rafa", "Thomas"] },
+    { registration: "PP-JMJ", model: "Phenom 300", nickname: null, responsibles: ["Rafael"] },
+    { registration: "PR-TBX", model: "Legacy 650", nickname: null, responsibles: ["Matheus", "Caio"] },
   ];
 
   const aircraft: Record<string, Awaited<ReturnType<typeof prisma.aircraft.upsert>>> = {};
   for (const a of aircraftData) {
+    const { responsibles, ...data } = a;
     aircraft[a.registration] = await prisma.aircraft.upsert({
       where: { registration: a.registration },
       update: {},
-      create: a,
+      create: data,
+    });
+    await prisma.aircraft.update({
+      where: { id: aircraft[a.registration].id },
+      data: { responsibles: { set: responsibles.map((name) => ({ id: users[name].id })) } },
     });
   }
 
