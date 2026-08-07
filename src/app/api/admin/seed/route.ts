@@ -11,8 +11,7 @@ const SEED_TOKEN = "c0449dafc9112be4a64635bc1a8d94a533f6dcd840c1d065";
  * Refuses to run if the database already has any users, so it can't be used
  * to duplicate data.
  */
-export async function POST(req: NextRequest) {
-  const secret = req.headers.get("x-seed-secret");
+async function handleSeedRequest(secret: string | null) {
   if (!secret || secret !== SEED_TOKEN) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
@@ -24,4 +23,12 @@ export async function POST(req: NextRequest) {
 
   const summary = await seedDatabase(prisma);
   return NextResponse.json({ ok: true, summary });
+}
+
+export async function POST(req: NextRequest) {
+  return handleSeedRequest(req.headers.get("x-seed-secret") ?? req.nextUrl.searchParams.get("token"));
+}
+
+export async function GET(req: NextRequest) {
+  return handleSeedRequest(req.nextUrl.searchParams.get("token"));
 }
