@@ -70,6 +70,7 @@ export function MaintenanceList({ events, canEdit }: { events: MaintenanceRow[];
                   <th className="px-4 py-2.5 font-medium">Tipo</th>
                   <th className="px-4 py-2.5 font-medium">Período</th>
                   <th className="px-4 py-2.5 font-medium">Concluída em</th>
+                  {canEdit && <th className="px-4 py-2.5 font-medium text-right">Ações</th>}
                 </tr>
               </thead>
               <tbody>
@@ -81,6 +82,22 @@ export function MaintenanceList({ events, canEdit }: { events: MaintenanceRow[];
                       {e.periodStart ? `${formatDate(e.periodStart)} — ${formatDate(e.periodEnd)}` : "-"}
                     </td>
                     <td className="px-4 py-2.5 text-muted">{formatDate(e.completedAt)}</td>
+                    {canEdit && (
+                      <td className="px-4 py-2.5">
+                        <div className="flex items-center justify-end gap-3">
+                          <EditMaintenanceButton event={e} />
+                          <button
+                            onClick={() => {
+                              if (confirm(`Excluir "${e.title}"?`)) deleteMaintenanceEvent(e.id);
+                            }}
+                            className="text-muted hover:text-danger transition-colors"
+                            aria-label="Excluir"
+                          >
+                            <Trash2 className="size-3.5" />
+                          </button>
+                        </div>
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>
