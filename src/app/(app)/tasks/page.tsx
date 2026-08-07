@@ -5,50 +5,85 @@ import { prisma } from "@/lib/prisma";
 import { Badge, taskStatusTone } from "@/components/Badge";
 import { TASK_STATUS_LABEL, formatDate, isTaskOverdue } from "@/lib/status";
 import { TasksFilterBar } from "@/components/TasksFilterBar";
+import { NewGlobalTaskModal } from "@/components/TaskFormModal";
 
 export default async function GlobalTasksPage({
   searchParams,
 }: {
-  searchParams: Promise<{ aircraft?: string; status?: string }>;
+  searchParams: Promise<{ aircraft?: string; status?: string; responsible?: string }>;
 }) {
   const session = await requireSession();
   const params = await searchParams;
   const accessible = await getAccessibleAircraftIds(session);
 
-  const [aircraftList, tasks] = await Promise.all([
+  const [aircraftList, team, writableGrants] = await Promise.all([
     prisma.aircraft.findMany({
       where: { active: true, ...(accessible ? { id: { in: accessible } } : {}) },
       orderBy: { registration: "asc" },
     }),
-    prisma.task.findMany({
-      where: {
-        ...(accessible ? { aircraftId: { in: accessible } } : {}),
-        ...(params.aircraft ? { aircraftId: params.aircraft } : {}),
-        ...(params.status ? { status: params.status as "TODO" | "IN_PROGRESS" | "DONE" } : {}),
-      },
-      include: { assignees: true, aircraft: true },
-      orderBy: { dueDate: "asc" },
-    }),
+    prisma.user.findMany({ where: { role: "INTERNAL", active: true }, orderBy: { name: "asc" } }),
+    session.role === "CLIENT"
+      ? prisma.aircraftAccess.findMany({ where: { userId: session.id, canEdit: true }, select: { aircraftId: true } })
+      : Promise.resolve(null),
   ]);
+  const writableAircraftIds = writableGrants ? new Set(writableGrants.map((g) => g.aircraftId)) : null;
+  const writableAircraftList = writableAircraftIds ? aircraftList.filter((a) => writableAircraftIds.has(a.id)) : aircraftList;
 
-  const grouped = new Map<string, { name: string; color: string; tasks: typeof tasks }>();
-  for (const t of tasks) {
-    const members = t.assignees.length > 0 ? t.assignees : [{ id: "sem-responsavel", name: "Sem responsável", color: "#8a94a6" }];
-    for (const member of members) {
-      if (!grouped.has(member.id)) grouped.set(member.id, { name: member.name, color: member.color, tasks: [] });
-      grouped.get(member.id)!.tasks.push(t);
+  const showMineOption = session.role === "INTERNAL";
+  const selectedResponsible = params.responsible ?? (showMineOption ? "mine" : "all");
+  const responsibleId = selectedResponsible === "mine" ? session.id : selectedResponsible;
+
+  const tasks = await prisma.task.findMany({
+    where: {
+      ...(accessible ? { aircraftId: { in: accessible } } : {}),
+      ...(params.aircraft ? { aircraftId: params.aircraft } : {}),
+      ...(params.status ? { status: params.status as "TODO" | "IN_PROGRESS" | "DONE" } : {}),
+      ...(selectedResponsible !== "all" ? { assignees: { some: { id: responsibleId } } } : {}),
+    },
+    include: { assignees: true, aircraft: true },
+    orderBy: { dueDate: "asc" },
+  });
+
+  let groups: { name: string; color: string; tasks: typeof tasks }[];
+  if (selectedResponsible !== "all") {
+    const person =
+      selectedResponsible === "mine"
+        ? { name: session.name, color: session.color }
+        : (team.find((u) => u.id === responsibleId) ?? { name: "Responsável", color: "#8a94a6" });
+    groups = tasks.length > 0 ? [{ name: person.name, color: person.color, tasks }] : [];
+  } else {
+    const grouped = new Map<string, { name: string; color: string; tasks: typeof tasks }>();
+    for (const t of tasks) {
+      const members = t.assignees.length > 0 ? t.assignees : [{ id: "sem-responsavel", name: "Sem responsável", color: "#8a94a6" }];
+      for (const member of members) {
+        if (!grouped.has(member.id)) grouped.set(member.id, { name: member.name, color: member.color, tasks: [] });
+        grouped.get(member.id)!.tasks.push(t);
+      }
     }
+    groups = [...grouped.values()].sort((a, b) => b.tasks.length - a.tasks.length);
   }
-  const groups = [...grouped.values()].sort((a, b) => b.tasks.length - a.tasks.length);
 
   return (
     <div className="flex flex-col gap-5">
-      <div>
-        <h1 className="text-xl font-semibold text-foreground">Tarefas — visão por responsável</h1>
-        <p className="text-sm text-muted mt-0.5">Quem está com o quê, em toda a frota.</p>
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-semibold text-foreground">Tarefas — visão por responsável</h1>
+          <p className="text-sm text-muted mt-0.5">Quem está com o quê, em toda a frota.</p>
+        </div>
+        {writableAircraftList.length > 0 && (
+          <NewGlobalTaskModal
+            aircraftOptions={writableAircraftList.map((a) => ({ id: a.id, label: `${a.registration} · ${a.model}` }))}
+            assigneeOptions={team.map((u) => ({ id: u.id, name: u.name }))}
+          />
+        )}
       </div>
 
-      <TasksFilterBar aircraftOptions={aircraftList.map((a) => ({ id: a.id, label: `${a.registration} · ${a.model}` }))} />
+      <TasksFilterBar
+        aircraftOptions={aircraftList.map((a) => ({ id: a.id, label: `${a.registration} · ${a.model}` }))}
+        responsibleOptions={team.map((u) => ({ id: u.id, label: u.name }))}
+        defaultResponsible={selectedResponsible}
+        showMineOption={showMineOption}
+      />
 
       <div className="grid md:grid-cols-2 gap-4">
         {groups.map((group) => (
